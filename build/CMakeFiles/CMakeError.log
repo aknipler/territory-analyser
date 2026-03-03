@@ -1,0 +1,1007 @@
+Build output check failed:
+    Regex: 'command[- ]line option .* is valid for .* but not for C'
+    Output line: 'cc1: warning: command line option ‘-Wnon-virtual-dtor’ is valid for C++/ObjC++ but not for C'
+Compilation failed:
+    source file: '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.c'
+    check option: ' -fsigned-char -W -Wall -Wreturn-type  -Wnon-virtual-dtor'
+===== BUILD LOG =====
+Change Dir: /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_44399/fast && /usr/bin/make -f CMakeFiles/cmTC_44399.dir/build.make CMakeFiles/cmTC_44399.dir/build
+make[1]: Entering directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_44399.dir/src.c.o
+/usr/bin/cc   -O3 -DNDEBUG -fPIE    -fsigned-char -W -Wall -Wreturn-type  -Wnon-virtual-dtor -o CMakeFiles/cmTC_44399.dir/src.c.o   -c /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.c
+cc1: warning: command line option ‘-Wnon-virtual-dtor’ is valid for C++/ObjC++ but not for C
+/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.c:1: warning: ignoring #pragma   [-Wunknown-pragmas]
+    1 | #pragma
+      | 
+Linking C executable cmTC_44399
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_44399.dir/link.txt --verbose=1
+/usr/bin/cc   -O3 -DNDEBUG    CMakeFiles/cmTC_44399.dir/src.c.o  -o cmTC_44399 
+make[1]: Leaving directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+
+
+===== END =====
+
+Build output check failed:
+    Regex: 'command[- ]line option .* is valid for .* but not for C\+\+'
+    Output line: 'cc1plus: warning: command line option ‘-Wmissing-prototypes’ is valid for C/ObjC but not for C++'
+Compilation failed:
+    source file: '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.cxx'
+    check option: ' -fsigned-char -W -Wall -Wreturn-type -Wnon-virtual-dtor -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations  -Wmissing-prototypes'
+===== BUILD LOG =====
+Change Dir: /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_a6fe2/fast && /usr/bin/make -f CMakeFiles/cmTC_a6fe2.dir/build.make CMakeFiles/cmTC_a6fe2.dir/build
+make[1]: Entering directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_a6fe2.dir/src.cxx.o
+/usr/bin/c++    -O3 -DNDEBUG -fPIE    -fsigned-char -W -Wall -Wreturn-type -Wnon-virtual-dtor -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations  -Wmissing-prototypes -std=c++11 -o CMakeFiles/cmTC_a6fe2.dir/src.cxx.o -c /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.cxx
+cc1plus: warning: command line option ‘-Wmissing-prototypes’ is valid for C/ObjC but not for C++
+/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.cxx:1: warning: ignoring #pragma   [-Wunknown-pragmas]
+    1 | #pragma
+      | 
+Linking CXX executable cmTC_a6fe2
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_a6fe2.dir/link.txt --verbose=1
+/usr/bin/c++    -O3 -DNDEBUG    CMakeFiles/cmTC_a6fe2.dir/src.cxx.o  -o cmTC_a6fe2 
+make[1]: Leaving directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+
+
+===== END =====
+
+Build output check failed:
+    Regex: 'command[- ]line option .* is valid for .* but not for C\+\+'
+    Output line: 'cc1plus: warning: command line option ‘-Wstrict-prototypes’ is valid for C/ObjC but not for C++'
+Compilation failed:
+    source file: '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.cxx'
+    check option: ' -fsigned-char -W -Wall -Wreturn-type -Wnon-virtual-dtor -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations  -Wstrict-prototypes'
+===== BUILD LOG =====
+Change Dir: /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_da10b/fast && /usr/bin/make -f CMakeFiles/cmTC_da10b.dir/build.make CMakeFiles/cmTC_da10b.dir/build
+make[1]: Entering directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_da10b.dir/src.cxx.o
+/usr/bin/c++    -O3 -DNDEBUG -fPIE    -fsigned-char -W -Wall -Wreturn-type -Wnon-virtual-dtor -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations  -Wstrict-prototypes -std=c++11 -o CMakeFiles/cmTC_da10b.dir/src.cxx.o -c /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.cxx
+cc1plus: warning: command line option ‘-Wstrict-prototypes’ is valid for C/ObjC but not for C++
+/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.cxx:1: warning: ignoring #pragma   [-Wunknown-pragmas]
+    1 | #pragma
+      | 
+Linking CXX executable cmTC_da10b
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_da10b.dir/link.txt --verbose=1
+/usr/bin/c++    -O3 -DNDEBUG    CMakeFiles/cmTC_da10b.dir/src.cxx.o  -o cmTC_da10b 
+make[1]: Leaving directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+
+
+===== END =====
+
+Build output check failed:
+    Regex: 'command[- ]line option .* is valid for .* but not for C'
+    Output line: 'cc1: warning: command line option ‘-Wsign-promo’ is valid for C++/ObjC++ but not for C'
+Compilation failed:
+    source file: '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.c'
+    check option: ' -fsigned-char -W -Wall -Wreturn-type -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow  -Wsign-promo'
+===== BUILD LOG =====
+Change Dir: /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_835fe/fast && /usr/bin/make -f CMakeFiles/cmTC_835fe.dir/build.make CMakeFiles/cmTC_835fe.dir/build
+make[1]: Entering directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_835fe.dir/src.c.o
+/usr/bin/cc   -O3 -DNDEBUG -fPIE    -fsigned-char -W -Wall -Wreturn-type -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow  -Wsign-promo -o CMakeFiles/cmTC_835fe.dir/src.c.o   -c /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.c
+cc1: warning: command line option ‘-Wsign-promo’ is valid for C++/ObjC++ but not for C
+/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.c:1: warning: ignoring #pragma   [-Wunknown-pragmas]
+    1 | #pragma
+      | 
+Linking C executable cmTC_835fe
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_835fe.dir/link.txt --verbose=1
+/usr/bin/cc   -O3 -DNDEBUG    CMakeFiles/cmTC_835fe.dir/src.c.o  -o cmTC_835fe 
+make[1]: Leaving directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+
+
+===== END =====
+
+Build output check failed:
+    Regex: 'command[- ]line option .* is valid for .* but not for C'
+    Output line: 'cc1: warning: command line option ‘-Wsuggest-override’ is valid for C++/ObjC++ but not for C'
+Compilation failed:
+    source file: '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.c'
+    check option: ' -fsigned-char -W -Wall -Wreturn-type -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wuninitialized  -Wsuggest-override'
+===== BUILD LOG =====
+Change Dir: /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_25844/fast && /usr/bin/make -f CMakeFiles/cmTC_25844.dir/build.make CMakeFiles/cmTC_25844.dir/build
+make[1]: Entering directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_25844.dir/src.c.o
+/usr/bin/cc   -O3 -DNDEBUG -fPIE    -fsigned-char -W -Wall -Wreturn-type -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wuninitialized  -Wsuggest-override -o CMakeFiles/cmTC_25844.dir/src.c.o   -c /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.c
+cc1: warning: command line option ‘-Wsuggest-override’ is valid for C++/ObjC++ but not for C
+/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.c:1: warning: ignoring #pragma   [-Wunknown-pragmas]
+    1 | #pragma
+      | 
+Linking C executable cmTC_25844
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_25844.dir/link.txt --verbose=1
+/usr/bin/cc   -O3 -DNDEBUG    CMakeFiles/cmTC_25844.dir/src.c.o  -o cmTC_25844 
+make[1]: Leaving directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+
+
+===== END =====
+
+Build output check failed:
+    Regex: 'command[- ]line option .* is valid for .* but not for C'
+    Output line: 'cc1: warning: command line option ‘-Wno-delete-non-virtual-dtor’ is valid for C++/ObjC++ but not for C'
+Compilation failed:
+    source file: '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.c'
+    check option: ' -fsigned-char -W -Wall -Wreturn-type -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wuninitialized  -Wno-delete-non-virtual-dtor'
+===== BUILD LOG =====
+Change Dir: /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_d6619/fast && /usr/bin/make -f CMakeFiles/cmTC_d6619.dir/build.make CMakeFiles/cmTC_d6619.dir/build
+make[1]: Entering directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_d6619.dir/src.c.o
+/usr/bin/cc   -O3 -DNDEBUG -fPIE    -fsigned-char -W -Wall -Wreturn-type -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wuninitialized  -Wno-delete-non-virtual-dtor -o CMakeFiles/cmTC_d6619.dir/src.c.o   -c /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.c
+cc1: warning: command line option ‘-Wno-delete-non-virtual-dtor’ is valid for C++/ObjC++ but not for C
+/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.c:1: warning: ignoring #pragma   [-Wunknown-pragmas]
+    1 | #pragma
+      | 
+Linking C executable cmTC_d6619
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_d6619.dir/link.txt --verbose=1
+/usr/bin/cc   -O3 -DNDEBUG    CMakeFiles/cmTC_d6619.dir/src.c.o  -o cmTC_d6619 
+make[1]: Leaving directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+
+
+===== END =====
+
+Build output check failed:
+    Regex: 'unrecognized .*option'
+    Output line: 'cc1plus: warning: unrecognized command line option ‘-Wno-unnamed-type-template-args’'
+Compilation failed:
+    source file: '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.cxx'
+    check option: ' -fsigned-char -W -Wall -Wreturn-type -Wnon-virtual-dtor -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations -Wundef -Winit-self -Wpointer-arith -Wshadow -Wsign-promo -Wuninitialized -Wsuggest-override -Wno-delete-non-virtual-dtor  -Wno-unnamed-type-template-args'
+===== BUILD LOG =====
+Change Dir: /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_7d051/fast && /usr/bin/make -f CMakeFiles/cmTC_7d051.dir/build.make CMakeFiles/cmTC_7d051.dir/build
+make[1]: Entering directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_7d051.dir/src.cxx.o
+/usr/bin/c++    -O3 -DNDEBUG -fPIE    -fsigned-char -W -Wall -Wreturn-type -Wnon-virtual-dtor -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations -Wundef -Winit-self -Wpointer-arith -Wshadow -Wsign-promo -Wuninitialized -Wsuggest-override -Wno-delete-non-virtual-dtor  -Wno-unnamed-type-template-args -std=c++11 -o CMakeFiles/cmTC_7d051.dir/src.cxx.o -c /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.cxx
+/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.cxx:1: warning: ignoring #pragma   [-Wunknown-pragmas]
+    1 | #pragma
+      | 
+cc1plus: warning: unrecognized command line option ‘-Wno-unnamed-type-template-args’
+Linking CXX executable cmTC_7d051
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_7d051.dir/link.txt --verbose=1
+/usr/bin/c++    -O3 -DNDEBUG    CMakeFiles/cmTC_7d051.dir/src.cxx.o  -o cmTC_7d051 
+make[1]: Leaving directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+
+
+===== END =====
+
+Build output check failed:
+    Regex: 'unrecognized .*option'
+    Output line: 'cc1: warning: unrecognized command line option ‘-Wno-unnamed-type-template-args’'
+Compilation failed:
+    source file: '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.c'
+    check option: ' -fsigned-char -W -Wall -Wreturn-type -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wuninitialized  -Wno-unnamed-type-template-args'
+===== BUILD LOG =====
+Change Dir: /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_e1ac6/fast && /usr/bin/make -f CMakeFiles/cmTC_e1ac6.dir/build.make CMakeFiles/cmTC_e1ac6.dir/build
+make[1]: Entering directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_e1ac6.dir/src.c.o
+/usr/bin/cc   -O3 -DNDEBUG -fPIE    -fsigned-char -W -Wall -Wreturn-type -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wuninitialized  -Wno-unnamed-type-template-args -o CMakeFiles/cmTC_e1ac6.dir/src.c.o   -c /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.c
+/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.c:1: warning: ignoring #pragma   [-Wunknown-pragmas]
+    1 | #pragma
+      | 
+cc1: warning: unrecognized command line option ‘-Wno-unnamed-type-template-args’
+Linking C executable cmTC_e1ac6
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_e1ac6.dir/link.txt --verbose=1
+/usr/bin/cc   -O3 -DNDEBUG    CMakeFiles/cmTC_e1ac6.dir/src.c.o  -o cmTC_e1ac6 
+make[1]: Leaving directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+
+
+===== END =====
+
+Compilation failed:
+    source file: '/home/ash/ca-territorial/opencv-4.x/cmake/checks/cpu_sse3.cpp'
+    check option: ''
+===== BUILD LOG =====
+Change Dir: /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_0aa07/fast && /usr/bin/make -f CMakeFiles/cmTC_0aa07.dir/build.make CMakeFiles/cmTC_0aa07.dir/build
+make[1]: Entering directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_0aa07.dir/cpu_sse3.cpp.o
+/usr/bin/c++    -O3 -DNDEBUG -fPIE   -std=c++11 -o CMakeFiles/cmTC_0aa07.dir/cpu_sse3.cpp.o -c /home/ash/ca-territorial/opencv-4.x/cmake/checks/cpu_sse3.cpp
+In file included from /home/ash/ca-territorial/opencv-4.x/cmake/checks/cpu_sse3.cpp:1:
+/usr/lib/gcc/x86_64-linux-gnu/9/include/pmmintrin.h: In function ‘int main()’:
+/usr/lib/gcc/x86_64-linux-gnu/9/include/pmmintrin.h:74:1: error: inlining failed in call to always_inline ‘__m128 _mm_moveldup_ps(__m128)’: target specific option mismatch
+   74 | _mm_moveldup_ps (__m128 __X)
+      | ^~~~~~~~~~~~~~~
+/home/ash/ca-territorial/opencv-4.x/cmake/checks/cpu_sse3.cpp:5:24: note: called from here
+    5 |     v = _mm_moveldup_ps(u); // SSE3
+      |         ~~~~~~~~~~~~~~~^~~
+In file included from /home/ash/ca-territorial/opencv-4.x/cmake/checks/cpu_sse3.cpp:1:
+/usr/lib/gcc/x86_64-linux-gnu/9/include/pmmintrin.h:74:1: error: inlining failed in call to always_inline ‘__m128 _mm_moveldup_ps(__m128)’: target specific option mismatch
+   74 | _mm_moveldup_ps (__m128 __X)
+      | ^~~~~~~~~~~~~~~
+/home/ash/ca-territorial/opencv-4.x/cmake/checks/cpu_sse3.cpp:5:24: note: called from here
+    5 |     v = _mm_moveldup_ps(u); // SSE3
+      |         ~~~~~~~~~~~~~~~^~~
+make[1]: *** [CMakeFiles/cmTC_0aa07.dir/build.make:66: CMakeFiles/cmTC_0aa07.dir/cpu_sse3.cpp.o] Error 1
+make[1]: Leaving directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+make: *** [Makefile:121: cmTC_0aa07/fast] Error 2
+
+
+===== END =====
+
+Build output check failed:
+    Regex: 'command[- ]line option .* is valid for .* but not for C'
+    Output line: 'cc1: warning: command line option ‘-fvisibility-inlines-hidden’ is valid for C++/ObjC++ but not for C'
+Compilation failed:
+    source file: '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.c'
+    check option: ' -fsigned-char -W -Wall -Wreturn-type -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wuninitialized -Wno-comment -Wimplicit-fallthrough=3 -Wno-strict-overflow -fdiagnostics-show-option -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse3 -fvisibility=hidden  -fvisibility-inlines-hidden'
+===== BUILD LOG =====
+Change Dir: /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_f8de2/fast && /usr/bin/make -f CMakeFiles/cmTC_f8de2.dir/build.make CMakeFiles/cmTC_f8de2.dir/build
+make[1]: Entering directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_f8de2.dir/src.c.o
+/usr/bin/cc   -O3 -DNDEBUG -fPIE    -fsigned-char -W -Wall -Wreturn-type -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wuninitialized -Wno-comment -Wimplicit-fallthrough=3 -Wno-strict-overflow -fdiagnostics-show-option -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse3 -fvisibility=hidden  -fvisibility-inlines-hidden -o CMakeFiles/cmTC_f8de2.dir/src.c.o   -c /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.c
+cc1: warning: command line option ‘-fvisibility-inlines-hidden’ is valid for C++/ObjC++ but not for C
+/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.c:1: warning: ignoring #pragma   [-Wunknown-pragmas]
+    1 | #pragma
+      | 
+Linking C executable cmTC_f8de2
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_f8de2.dir/link.txt --verbose=1
+/usr/bin/cc   -O3 -DNDEBUG    CMakeFiles/cmTC_f8de2.dir/src.c.o  -o cmTC_f8de2 
+make[1]: Leaving directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+
+
+===== END =====
+
+Determining if the elf_aux_info exist failed with the following output:
+Change Dir: /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_2a9ea/fast && /usr/bin/make -f CMakeFiles/cmTC_2a9ea.dir/build.make CMakeFiles/cmTC_2a9ea.dir/build
+make[1]: Entering directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_2a9ea.dir/CheckSymbolExists.c.o
+/usr/bin/cc   -fsigned-char -W -Wall -Wreturn-type -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wuninitialized -Wno-comment -Wimplicit-fallthrough=3 -Wno-strict-overflow -fdiagnostics-show-option -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse3 -fvisibility=hidden  -O3 -DNDEBUG  -DNDEBUG -fPIE   -o CMakeFiles/cmTC_2a9ea.dir/CheckSymbolExists.c.o   -c /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c
+/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c: In function ‘main’:
+/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c:8:19: error: ‘elf_aux_info’ undeclared (first use in this function)
+    8 |   return ((int*)(&elf_aux_info))[argc];
+      |                   ^~~~~~~~~~~~
+/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c:8:19: note: each undeclared identifier is reported only once for each function it appears in
+/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c:4:14: warning: parameter ‘argc’ set but not used [-Wunused-but-set-parameter]
+    4 | int main(int argc, char** argv)
+      |          ~~~~^~~~
+make[1]: *** [CMakeFiles/cmTC_2a9ea.dir/build.make:66: CMakeFiles/cmTC_2a9ea.dir/CheckSymbolExists.c.o] Error 1
+make[1]: Leaving directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+make: *** [Makefile:121: cmTC_2a9ea/fast] Error 2
+
+
+File /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c:
+/* */
+#include <sys/auxv.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef elf_aux_info
+  return ((int*)(&elf_aux_info))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+Build output check failed:
+    Regex: 'unrecognized .*option'
+    Output line: 'cc1: warning: unrecognized command line option ‘-Wno-shorten-64-to-32’'
+Compilation failed:
+    source file: '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.c'
+    check option: ' -Wno-shorten-64-to-32'
+===== BUILD LOG =====
+Change Dir: /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_5bac1/fast && /usr/bin/make -f CMakeFiles/cmTC_5bac1.dir/build.make CMakeFiles/cmTC_5bac1.dir/build
+make[1]: Entering directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_5bac1.dir/src.c.o
+/usr/bin/cc   -fsigned-char -W -Wall -Wreturn-type -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wuninitialized -Wno-comment -Wimplicit-fallthrough=3 -Wno-strict-overflow -fdiagnostics-show-option -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse3 -fvisibility=hidden -Wno-unused-parameter -Wno-sign-compare  -O3 -DNDEBUG  -DNDEBUG -fPIE    -Wno-shorten-64-to-32 -o CMakeFiles/cmTC_5bac1.dir/src.c.o   -c /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.c
+/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.c:1: warning: ignoring #pragma   [-Wunknown-pragmas]
+    1 | #pragma
+      | 
+cc1: warning: unrecognized command line option ‘-Wno-shorten-64-to-32’
+Linking C executable cmTC_5bac1
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_5bac1.dir/link.txt --verbose=1
+/usr/bin/cc    -fsigned-char -W -Wall -Wreturn-type -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wuninitialized -Wno-comment -Wimplicit-fallthrough=3 -Wno-strict-overflow -fdiagnostics-show-option -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse3 -fvisibility=hidden -Wno-unused-parameter -Wno-sign-compare  -O3 -DNDEBUG  -DNDEBUG    -Wl,--gc-sections -Wl,--as-needed -Wl,--no-undefined  CMakeFiles/cmTC_5bac1.dir/src.c.o  -o cmTC_5bac1 
+make[1]: Leaving directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+
+
+===== END =====
+
+Looking for a ASM_NASM compiler failed with the following output:
+-- The ASM_NASM compiler identification is unknown
+-- Didn't find assembler
+CMake Error at CMakeLists.txt:2 (project):
+  No CMAKE_ASM_NASM_COMPILER could be found.
+
+  Tell CMake where to find the compiler by setting either the environment
+  variable "ASM_NASM" or the CMake cache entry CMAKE_ASM_NASM_COMPILER to the
+  full path to the compiler, or to the compiler name if it is in the PATH.
+
+
+-- Configuring incomplete, errors occurred!
+See also "/home/ash/ca-territorial/build/3rdparty/libjpeg-turbo/simd/CMakeFiles/CheckASM_NASM/CMakeFiles/CMakeOutput.log".
+See also "/home/ash/ca-territorial/build/3rdparty/libjpeg-turbo/simd/CMakeFiles/CheckASM_NASM/CMakeFiles/CMakeError.log".
+
+Determining if the include file io.h exists failed with the following output:
+Change Dir: /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_1b82e/fast && /usr/bin/make -f CMakeFiles/cmTC_1b82e.dir/build.make CMakeFiles/cmTC_1b82e.dir/build
+make[1]: Entering directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_1b82e.dir/CheckIncludeFile.c.o
+/usr/bin/cc   -fsigned-char -W -Wall -Wreturn-type -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wuninitialized -Wno-comment -Wimplicit-fallthrough=3 -Wno-strict-overflow -fdiagnostics-show-option -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse3 -fvisibility=hidden  -O3 -DNDEBUG  -DNDEBUG -fPIE   -o CMakeFiles/cmTC_1b82e.dir/CheckIncludeFile.c.o   -c /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/CheckIncludeFile.c
+/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/CheckIncludeFile.c:1:10: fatal error: io.h: No such file or directory
+    1 | #include <io.h>
+      |          ^~~~~~
+compilation terminated.
+make[1]: *** [CMakeFiles/cmTC_1b82e.dir/build.make:66: CMakeFiles/cmTC_1b82e.dir/CheckIncludeFile.c.o] Error 1
+make[1]: Leaving directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+make: *** [Makefile:121: cmTC_1b82e/fast] Error 2
+
+
+
+Determining size of INT8 failed with the following output:
+Change Dir: /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_6b4cc/fast && /usr/bin/make -f CMakeFiles/cmTC_6b4cc.dir/build.make CMakeFiles/cmTC_6b4cc.dir/build
+make[1]: Entering directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_6b4cc.dir/int8.c.o
+/usr/bin/cc   -fsigned-char -W -Wall -Wreturn-type -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wuninitialized -Wno-comment -Wimplicit-fallthrough=3 -Wno-strict-overflow -fdiagnostics-show-option -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse3 -fvisibility=hidden  -O3 -DNDEBUG  -DNDEBUG -fPIE   -o CMakeFiles/cmTC_6b4cc.dir/int8.c.o   -c /home/ash/ca-territorial/build/CMakeFiles/CheckTypeSize/int8.c
+/home/ash/ca-territorial/build/CMakeFiles/CheckTypeSize/int8.c:23:22: error: ‘INT8’ undeclared here (not in a function); did you mean ‘INT8_C’?
+   23 | #define SIZE (sizeof(INT8))
+      |                      ^~~~
+/home/ash/ca-territorial/build/CMakeFiles/CheckTypeSize/int8.c:25:12: note: in expansion of macro ‘SIZE’
+   25 |   ('0' + ((SIZE / 10000)%10)),
+      |            ^~~~
+make[1]: *** [CMakeFiles/cmTC_6b4cc.dir/build.make:66: CMakeFiles/cmTC_6b4cc.dir/int8.c.o] Error 1
+make[1]: Leaving directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+make: *** [Makefile:121: cmTC_6b4cc/fast] Error 2
+
+
+/home/ash/ca-territorial/build/CMakeFiles/CheckTypeSize/int8.c:
+#include <sys/types.h>
+#include <stdint.h>
+#include <stddef.h>
+
+
+#undef KEY
+#if defined(__i386)
+# define KEY '_','_','i','3','8','6'
+#elif defined(__x86_64)
+# define KEY '_','_','x','8','6','_','6','4'
+#elif defined(__ppc__)
+# define KEY '_','_','p','p','c','_','_'
+#elif defined(__ppc64__)
+# define KEY '_','_','p','p','c','6','4','_','_'
+#elif defined(__aarch64__)
+# define KEY '_','_','a','a','r','c','h','6','4','_','_'
+#elif defined(__ARM_ARCH_7A__)
+# define KEY '_','_','A','R','M','_','A','R','C','H','_','7','A','_','_'
+#elif defined(__ARM_ARCH_7S__)
+# define KEY '_','_','A','R','M','_','A','R','C','H','_','7','S','_','_'
+#endif
+
+#define SIZE (sizeof(INT8))
+static char info_size[] =  {'I', 'N', 'F', 'O', ':', 's','i','z','e','[',
+  ('0' + ((SIZE / 10000)%10)),
+  ('0' + ((SIZE / 1000)%10)),
+  ('0' + ((SIZE / 100)%10)),
+  ('0' + ((SIZE / 10)%10)),
+  ('0' +  (SIZE    % 10)),
+  ']',
+#ifdef KEY
+  ' ','k','e','y','[', KEY, ']',
+#endif
+  '\0'};
+
+#ifdef __CLASSIC_C__
+int main(argc, argv) int argc; char *argv[];
+#else
+int main(int argc, char *argv[])
+#endif
+{
+  int require = 0;
+  require += info_size[argc];
+  (void)argv;
+  return require;
+}
+
+
+Determining size of INT16 failed with the following output:
+Change Dir: /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_2e084/fast && /usr/bin/make -f CMakeFiles/cmTC_2e084.dir/build.make CMakeFiles/cmTC_2e084.dir/build
+make[1]: Entering directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_2e084.dir/int16.c.o
+/usr/bin/cc   -fsigned-char -W -Wall -Wreturn-type -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wuninitialized -Wno-comment -Wimplicit-fallthrough=3 -Wno-strict-overflow -fdiagnostics-show-option -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse3 -fvisibility=hidden  -O3 -DNDEBUG  -DNDEBUG -fPIE   -o CMakeFiles/cmTC_2e084.dir/int16.c.o   -c /home/ash/ca-territorial/build/CMakeFiles/CheckTypeSize/int16.c
+/home/ash/ca-territorial/build/CMakeFiles/CheckTypeSize/int16.c:23:22: error: ‘INT16’ undeclared here (not in a function); did you mean ‘INT16_C’?
+   23 | #define SIZE (sizeof(INT16))
+      |                      ^~~~~
+/home/ash/ca-territorial/build/CMakeFiles/CheckTypeSize/int16.c:25:12: note: in expansion of macro ‘SIZE’
+   25 |   ('0' + ((SIZE / 10000)%10)),
+      |            ^~~~
+make[1]: *** [CMakeFiles/cmTC_2e084.dir/build.make:66: CMakeFiles/cmTC_2e084.dir/int16.c.o] Error 1
+make[1]: Leaving directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+make: *** [Makefile:121: cmTC_2e084/fast] Error 2
+
+
+/home/ash/ca-territorial/build/CMakeFiles/CheckTypeSize/int16.c:
+#include <sys/types.h>
+#include <stdint.h>
+#include <stddef.h>
+
+
+#undef KEY
+#if defined(__i386)
+# define KEY '_','_','i','3','8','6'
+#elif defined(__x86_64)
+# define KEY '_','_','x','8','6','_','6','4'
+#elif defined(__ppc__)
+# define KEY '_','_','p','p','c','_','_'
+#elif defined(__ppc64__)
+# define KEY '_','_','p','p','c','6','4','_','_'
+#elif defined(__aarch64__)
+# define KEY '_','_','a','a','r','c','h','6','4','_','_'
+#elif defined(__ARM_ARCH_7A__)
+# define KEY '_','_','A','R','M','_','A','R','C','H','_','7','A','_','_'
+#elif defined(__ARM_ARCH_7S__)
+# define KEY '_','_','A','R','M','_','A','R','C','H','_','7','S','_','_'
+#endif
+
+#define SIZE (sizeof(INT16))
+static char info_size[] =  {'I', 'N', 'F', 'O', ':', 's','i','z','e','[',
+  ('0' + ((SIZE / 10000)%10)),
+  ('0' + ((SIZE / 1000)%10)),
+  ('0' + ((SIZE / 100)%10)),
+  ('0' + ((SIZE / 10)%10)),
+  ('0' +  (SIZE    % 10)),
+  ']',
+#ifdef KEY
+  ' ','k','e','y','[', KEY, ']',
+#endif
+  '\0'};
+
+#ifdef __CLASSIC_C__
+int main(argc, argv) int argc; char *argv[];
+#else
+int main(int argc, char *argv[])
+#endif
+{
+  int require = 0;
+  require += info_size[argc];
+  (void)argv;
+  return require;
+}
+
+
+Determining size of INT32 failed with the following output:
+Change Dir: /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_cafa4/fast && /usr/bin/make -f CMakeFiles/cmTC_cafa4.dir/build.make CMakeFiles/cmTC_cafa4.dir/build
+make[1]: Entering directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_cafa4.dir/int32.c.o
+/usr/bin/cc   -fsigned-char -W -Wall -Wreturn-type -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wuninitialized -Wno-comment -Wimplicit-fallthrough=3 -Wno-strict-overflow -fdiagnostics-show-option -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse3 -fvisibility=hidden  -O3 -DNDEBUG  -DNDEBUG -fPIE   -o CMakeFiles/cmTC_cafa4.dir/int32.c.o   -c /home/ash/ca-territorial/build/CMakeFiles/CheckTypeSize/int32.c
+/home/ash/ca-territorial/build/CMakeFiles/CheckTypeSize/int32.c:23:22: error: ‘INT32’ undeclared here (not in a function); did you mean ‘INT32_C’?
+   23 | #define SIZE (sizeof(INT32))
+      |                      ^~~~~
+/home/ash/ca-territorial/build/CMakeFiles/CheckTypeSize/int32.c:25:12: note: in expansion of macro ‘SIZE’
+   25 |   ('0' + ((SIZE / 10000)%10)),
+      |            ^~~~
+make[1]: *** [CMakeFiles/cmTC_cafa4.dir/build.make:66: CMakeFiles/cmTC_cafa4.dir/int32.c.o] Error 1
+make[1]: Leaving directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+make: *** [Makefile:121: cmTC_cafa4/fast] Error 2
+
+
+/home/ash/ca-territorial/build/CMakeFiles/CheckTypeSize/int32.c:
+#include <sys/types.h>
+#include <stdint.h>
+#include <stddef.h>
+
+
+#undef KEY
+#if defined(__i386)
+# define KEY '_','_','i','3','8','6'
+#elif defined(__x86_64)
+# define KEY '_','_','x','8','6','_','6','4'
+#elif defined(__ppc__)
+# define KEY '_','_','p','p','c','_','_'
+#elif defined(__ppc64__)
+# define KEY '_','_','p','p','c','6','4','_','_'
+#elif defined(__aarch64__)
+# define KEY '_','_','a','a','r','c','h','6','4','_','_'
+#elif defined(__ARM_ARCH_7A__)
+# define KEY '_','_','A','R','M','_','A','R','C','H','_','7','A','_','_'
+#elif defined(__ARM_ARCH_7S__)
+# define KEY '_','_','A','R','M','_','A','R','C','H','_','7','S','_','_'
+#endif
+
+#define SIZE (sizeof(INT32))
+static char info_size[] =  {'I', 'N', 'F', 'O', ':', 's','i','z','e','[',
+  ('0' + ((SIZE / 10000)%10)),
+  ('0' + ((SIZE / 1000)%10)),
+  ('0' + ((SIZE / 100)%10)),
+  ('0' + ((SIZE / 10)%10)),
+  ('0' +  (SIZE    % 10)),
+  ']',
+#ifdef KEY
+  ' ','k','e','y','[', KEY, ']',
+#endif
+  '\0'};
+
+#ifdef __CLASSIC_C__
+int main(argc, argv) int argc; char *argv[];
+#else
+int main(int argc, char *argv[])
+#endif
+{
+  int require = 0;
+  require += info_size[argc];
+  (void)argv;
+  return require;
+}
+
+
+Determining if the function setmode exists failed with the following output:
+Change Dir: /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_2eb8d/fast && /usr/bin/make -f CMakeFiles/cmTC_2eb8d.dir/build.make CMakeFiles/cmTC_2eb8d.dir/build
+make[1]: Entering directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_2eb8d.dir/CheckFunctionExists.c.o
+/usr/bin/cc   -fsigned-char -W -Wall -Wreturn-type -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wuninitialized -Wno-comment -Wimplicit-fallthrough=3 -Wno-strict-overflow -fdiagnostics-show-option -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse3 -fvisibility=hidden -DCHECK_FUNCTION_EXISTS=setmode -O3 -DNDEBUG  -DNDEBUG -fPIE   -o CMakeFiles/cmTC_2eb8d.dir/CheckFunctionExists.c.o   -c /usr/share/cmake-3.16/Modules/CheckFunctionExists.c
+Linking C executable cmTC_2eb8d
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_2eb8d.dir/link.txt --verbose=1
+/usr/bin/cc    -fsigned-char -W -Wall -Wreturn-type -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wuninitialized -Wno-comment -Wimplicit-fallthrough=3 -Wno-strict-overflow -fdiagnostics-show-option -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse3 -fvisibility=hidden -DCHECK_FUNCTION_EXISTS=setmode -O3 -DNDEBUG  -DNDEBUG    -Wl,--gc-sections -Wl,--as-needed -Wl,--no-undefined  CMakeFiles/cmTC_2eb8d.dir/CheckFunctionExists.c.o  -o cmTC_2eb8d 
+/usr/bin/ld: CMakeFiles/cmTC_2eb8d.dir/CheckFunctionExists.c.o: in function `main':
+CheckFunctionExists.c:(.text.startup.main+0x10): undefined reference to `setmode'
+collect2: error: ld returned 1 exit status
+make[1]: *** [CMakeFiles/cmTC_2eb8d.dir/build.make:87: cmTC_2eb8d] Error 1
+make[1]: Leaving directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+make: *** [Makefile:121: cmTC_2eb8d/fast] Error 2
+
+
+
+Build output check failed:
+    Regex: 'unrecognized .*option'
+    Output line: 'cc1: warning: unrecognized command line option ‘-Wno-array-parameter’'
+Compilation failed:
+    source file: '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.c'
+    check option: ' -Wno-array-parameter'
+===== BUILD LOG =====
+Change Dir: /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_bd25a/fast && /usr/bin/make -f CMakeFiles/cmTC_bd25a.dir/build.make CMakeFiles/cmTC_bd25a.dir/build
+make[1]: Entering directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_bd25a.dir/src.c.o
+/usr/bin/cc   -fsigned-char -W -Wall -Wreturn-type -Waddress -Wsequence-point -Wformat -Wformat-security -Wstrict-prototypes -Winit-self -Wpointer-arith -Wuninitialized -Wno-comment -Wno-strict-overflow -fdiagnostics-show-option -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse3 -fvisibility=hidden -Wno-unused-but-set-variable -Wno-missing-prototypes -Wno-missing-declarations -Wno-undef -Wno-unused -Wno-sign-compare -Wno-cast-align -Wno-shadow -Wno-maybe-uninitialized -Wno-pointer-to-int-cast -Wno-int-to-pointer-cast -Wno-misleading-indentation -Wno-implicit-fallthrough -Wno-unused-parameter  -O3 -DNDEBUG  -DNDEBUG -fPIE    -Wno-array-parameter -o CMakeFiles/cmTC_bd25a.dir/src.c.o   -c /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.c
+/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.c:1: warning: ignoring #pragma   [-Wunknown-pragmas]
+    1 | #pragma
+      | 
+cc1: warning: unrecognized command line option ‘-Wno-array-parameter’
+Linking C executable cmTC_bd25a
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_bd25a.dir/link.txt --verbose=1
+/usr/bin/cc    -fsigned-char -W -Wall -Wreturn-type -Waddress -Wsequence-point -Wformat -Wformat-security -Wstrict-prototypes -Winit-self -Wpointer-arith -Wuninitialized -Wno-comment -Wno-strict-overflow -fdiagnostics-show-option -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse3 -fvisibility=hidden -Wno-unused-but-set-variable -Wno-missing-prototypes -Wno-missing-declarations -Wno-undef -Wno-unused -Wno-sign-compare -Wno-cast-align -Wno-shadow -Wno-maybe-uninitialized -Wno-pointer-to-int-cast -Wno-int-to-pointer-cast -Wno-misleading-indentation -Wno-implicit-fallthrough -Wno-unused-parameter  -O3 -DNDEBUG  -DNDEBUG    -Wl,--gc-sections -Wl,--as-needed -Wl,--no-undefined  CMakeFiles/cmTC_bd25a.dir/src.c.o  -o cmTC_bd25a 
+make[1]: Leaving directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+
+
+===== END =====
+
+Build output check failed:
+    Regex: 'command[- ]line option .* is valid for .* but not for C\+\+'
+    Output line: 'cc1plus: warning: command line option ‘-Wno-missing-prototypes’ is valid for C/ObjC but not for C++'
+Compilation failed:
+    source file: '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.cxx'
+    check option: ' -Wno-missing-prototypes'
+===== BUILD LOG =====
+Change Dir: /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_9cc96/fast && /usr/bin/make -f CMakeFiles/cmTC_9cc96.dir/build.make CMakeFiles/cmTC_9cc96.dir/build
+make[1]: Entering directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_9cc96.dir/src.cxx.o
+/usr/bin/c++    -fsigned-char -W -Wall -Wreturn-type -Wnon-virtual-dtor -Waddress -Wsequence-point -Wformat -Wformat-security -Wundef -Winit-self -Wpointer-arith -Wshadow -Wsign-promo -Wuninitialized -Wsuggest-override -Wno-delete-non-virtual-dtor -Wno-comment -Wimplicit-fallthrough=3 -Wno-strict-overflow -fdiagnostics-show-option -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse3 -fvisibility=hidden -fvisibility-inlines-hidden -Wno-missing-declarations -Wno-unused-parameter  -O3 -DNDEBUG  -DNDEBUG -fPIE    -Wno-missing-prototypes -std=c++11 -o CMakeFiles/cmTC_9cc96.dir/src.cxx.o -c /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.cxx
+cc1plus: warning: command line option ‘-Wno-missing-prototypes’ is valid for C/ObjC but not for C++
+/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.cxx:1: warning: ignoring #pragma   [-Wunknown-pragmas]
+    1 | #pragma
+      | 
+Linking CXX executable cmTC_9cc96
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_9cc96.dir/link.txt --verbose=1
+/usr/bin/c++     -fsigned-char -W -Wall -Wreturn-type -Wnon-virtual-dtor -Waddress -Wsequence-point -Wformat -Wformat-security -Wundef -Winit-self -Wpointer-arith -Wshadow -Wsign-promo -Wuninitialized -Wsuggest-override -Wno-delete-non-virtual-dtor -Wno-comment -Wimplicit-fallthrough=3 -Wno-strict-overflow -fdiagnostics-show-option -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse3 -fvisibility=hidden -fvisibility-inlines-hidden -Wno-missing-declarations -Wno-unused-parameter  -O3 -DNDEBUG  -DNDEBUG    -Wl,--gc-sections -Wl,--as-needed -Wl,--no-undefined  CMakeFiles/cmTC_9cc96.dir/src.cxx.o  -o cmTC_9cc96 
+make[1]: Leaving directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+
+
+===== END =====
+
+Build output check failed:
+    Regex: 'unrecognized .*option'
+    Output line: 'cc1: warning: unrecognized command line option ‘-Wno-implicit-const-int-float-conversion’'
+Compilation failed:
+    source file: '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.c'
+    check option: ' -Wno-implicit-const-int-float-conversion'
+===== BUILD LOG =====
+Change Dir: /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_ac407/fast && /usr/bin/make -f CMakeFiles/cmTC_ac407.dir/build.make CMakeFiles/cmTC_ac407.dir/build
+make[1]: Entering directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_ac407.dir/src.c.o
+/usr/bin/cc   -fsigned-char -W -Wall -Wreturn-type -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wuninitialized -Wno-comment -Wimplicit-fallthrough=3 -Wno-strict-overflow -fdiagnostics-show-option -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse3 -fvisibility=hidden  -O3 -DNDEBUG  -DNDEBUG -fPIE    -Wno-implicit-const-int-float-conversion -o CMakeFiles/cmTC_ac407.dir/src.c.o   -c /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.c
+/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.c:1: warning: ignoring #pragma   [-Wunknown-pragmas]
+    1 | #pragma
+      | 
+cc1: warning: unrecognized command line option ‘-Wno-implicit-const-int-float-conversion’
+Linking C executable cmTC_ac407
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_ac407.dir/link.txt --verbose=1
+/usr/bin/cc    -fsigned-char -W -Wall -Wreturn-type -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wuninitialized -Wno-comment -Wimplicit-fallthrough=3 -Wno-strict-overflow -fdiagnostics-show-option -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse3 -fvisibility=hidden  -O3 -DNDEBUG  -DNDEBUG    -Wl,--gc-sections -Wl,--as-needed -Wl,--no-undefined  CMakeFiles/cmTC_ac407.dir/src.c.o  -o cmTC_ac407 
+make[1]: Leaving directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+
+
+===== END =====
+
+Build output check failed:
+    Regex: 'unrecognized .*option'
+    Output line: 'cc1: warning: unrecognized command line option ‘-Wno-documentation’'
+Compilation failed:
+    source file: '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.c'
+    check option: ' -Wno-documentation'
+===== BUILD LOG =====
+Change Dir: /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_611e6/fast && /usr/bin/make -f CMakeFiles/cmTC_611e6.dir/build.make CMakeFiles/cmTC_611e6.dir/build
+make[1]: Entering directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_611e6.dir/src.c.o
+/usr/bin/cc   -fsigned-char -W -Wall -Wreturn-type -Waddress -Wsequence-point -Wformat -Wformat-security -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wuninitialized -Wno-comment -Wimplicit-fallthrough=3 -Wno-strict-overflow -fdiagnostics-show-option -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse3 -fvisibility=hidden -Wno-unused-but-set-variable -Wno-missing-prototypes -Wno-missing-declarations  -O3 -DNDEBUG  -DNDEBUG -fPIE    -Wno-documentation -o CMakeFiles/cmTC_611e6.dir/src.c.o   -c /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.c
+/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.c:1: warning: ignoring #pragma   [-Wunknown-pragmas]
+    1 | #pragma
+      | 
+cc1: warning: unrecognized command line option ‘-Wno-documentation’
+Linking C executable cmTC_611e6
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_611e6.dir/link.txt --verbose=1
+/usr/bin/cc    -fsigned-char -W -Wall -Wreturn-type -Waddress -Wsequence-point -Wformat -Wformat-security -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wuninitialized -Wno-comment -Wimplicit-fallthrough=3 -Wno-strict-overflow -fdiagnostics-show-option -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse3 -fvisibility=hidden -Wno-unused-but-set-variable -Wno-missing-prototypes -Wno-missing-declarations  -O3 -DNDEBUG  -DNDEBUG    -Wl,--gc-sections -Wl,--as-needed -Wl,--no-undefined  CMakeFiles/cmTC_611e6.dir/src.c.o  -o cmTC_611e6 
+make[1]: Leaving directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+
+
+===== END =====
+
+Determining if the _aligned_malloc exist failed with the following output:
+Change Dir: /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_b28ff/fast && /usr/bin/make -f CMakeFiles/cmTC_b28ff.dir/build.make CMakeFiles/cmTC_b28ff.dir/build
+make[1]: Entering directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_b28ff.dir/CheckSymbolExists.c.o
+/usr/bin/cc   -fsigned-char -W -Wall -Wreturn-type -Waddress -Wsequence-point -Wformat -Wformat-security -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wuninitialized -Wno-comment -Wimplicit-fallthrough=3 -Wno-strict-overflow -fdiagnostics-show-option -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse3 -fvisibility=hidden -Wno-unused-but-set-variable -Wno-missing-prototypes -Wno-missing-declarations  -O3 -DNDEBUG  -DNDEBUG -fPIE   -o CMakeFiles/cmTC_b28ff.dir/CheckSymbolExists.c.o   -c /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c
+/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c: In function ‘main’:
+/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c:8:19: error: ‘_aligned_malloc’ undeclared (first use in this function)
+    8 |   return ((int*)(&_aligned_malloc))[argc];
+      |                   ^~~~~~~~~~~~~~~
+/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c:8:19: note: each undeclared identifier is reported only once for each function it appears in
+/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c:4:14: warning: parameter ‘argc’ set but not used [-Wunused-but-set-parameter]
+    4 | int main(int argc, char** argv)
+      |          ~~~~^~~~
+make[1]: *** [CMakeFiles/cmTC_b28ff.dir/build.make:66: CMakeFiles/cmTC_b28ff.dir/CheckSymbolExists.c.o] Error 1
+make[1]: Leaving directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+make: *** [Makefile:121: cmTC_b28ff/fast] Error 2
+
+
+File /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c:
+/* */
+#include <malloc.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef _aligned_malloc
+  return ((int*)(&_aligned_malloc))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+Build output check failed:
+    Regex: 'unrecognized .*option'
+    Output line: 'cc1: warning: unrecognized command line option ‘-Wno-null-pointer-subtraction’'
+Compilation failed:
+    source file: '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.c'
+    check option: ' -Wno-null-pointer-subtraction'
+===== BUILD LOG =====
+Change Dir: /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_71a1c/fast && /usr/bin/make -f CMakeFiles/cmTC_71a1c.dir/build.make CMakeFiles/cmTC_71a1c.dir/build
+make[1]: Entering directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_71a1c.dir/src.c.o
+/usr/bin/cc   -fsigned-char -W -Wall -Wreturn-type -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Winit-self -Wpointer-arith -Wshadow -Wuninitialized -Wno-comment -Wno-strict-overflow -fdiagnostics-show-option -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse3 -fvisibility=hidden -Wno-undef -Wno-cast-align -Wno-implicit-fallthrough -Wno-unused-parameter -Wno-sign-compare -Wno-maybe-uninitialized  -O3 -DNDEBUG  -DNDEBUG -fPIE    -Wno-null-pointer-subtraction -o CMakeFiles/cmTC_71a1c.dir/src.c.o   -c /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.c
+/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.c:1: warning: ignoring #pragma   [-Wunknown-pragmas]
+    1 | #pragma
+      | 
+cc1: warning: unrecognized command line option ‘-Wno-null-pointer-subtraction’
+Linking C executable cmTC_71a1c
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_71a1c.dir/link.txt --verbose=1
+/usr/bin/cc    -fsigned-char -W -Wall -Wreturn-type -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Winit-self -Wpointer-arith -Wshadow -Wuninitialized -Wno-comment -Wno-strict-overflow -fdiagnostics-show-option -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse3 -fvisibility=hidden -Wno-undef -Wno-cast-align -Wno-implicit-fallthrough -Wno-unused-parameter -Wno-sign-compare -Wno-maybe-uninitialized  -O3 -DNDEBUG  -DNDEBUG    -Wl,--gc-sections -Wl,--as-needed -Wl,--no-undefined  CMakeFiles/cmTC_71a1c.dir/src.c.o  -o cmTC_71a1c 
+make[1]: Leaving directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+
+
+===== END =====
+
+Build output check failed:
+    Regex: 'unrecognized .*option'
+    Output line: 'cc1plus: warning: unrecognized command line option ‘-Wno-inconsistent-missing-override’'
+Compilation failed:
+    source file: '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.cxx'
+    check option: ' -Wno-inconsistent-missing-override'
+===== BUILD LOG =====
+Change Dir: /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_cfc6c/fast && /usr/bin/make -f CMakeFiles/cmTC_cfc6c.dir/build.make CMakeFiles/cmTC_cfc6c.dir/build
+make[1]: Entering directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_cfc6c.dir/src.cxx.o
+/usr/bin/c++    -fsigned-char -W -Wall -Wreturn-type -Wnon-virtual-dtor -Waddress -Wsequence-point -Wformat -Wformat-security -Winit-self -Wpointer-arith -Wsign-promo -Wno-delete-non-virtual-dtor -Wno-comment -Wimplicit-fallthrough=3 -Wno-strict-overflow -fdiagnostics-show-option -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse3 -fvisibility=hidden -fvisibility-inlines-hidden -Wno-shadow -Wno-unused -Wno-sign-compare -Wno-undef -Wno-missing-declarations -Wno-uninitialized -Wno-switch -Wno-parentheses -Wno-array-bounds -Wno-extra -Wno-deprecated-declarations -Wno-misleading-indentation -Wno-deprecated -Wno-suggest-override  -O3 -DNDEBUG  -DNDEBUG -fPIE    -Wno-inconsistent-missing-override -std=c++11 -o CMakeFiles/cmTC_cfc6c.dir/src.cxx.o -c /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.cxx
+/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.cxx:1: warning: ignoring #pragma   [-Wunknown-pragmas]
+    1 | #pragma
+      | 
+cc1plus: warning: unrecognized command line option ‘-Wno-inconsistent-missing-override’
+Linking CXX executable cmTC_cfc6c
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_cfc6c.dir/link.txt --verbose=1
+/usr/bin/c++     -fsigned-char -W -Wall -Wreturn-type -Wnon-virtual-dtor -Waddress -Wsequence-point -Wformat -Wformat-security -Winit-self -Wpointer-arith -Wsign-promo -Wno-delete-non-virtual-dtor -Wno-comment -Wimplicit-fallthrough=3 -Wno-strict-overflow -fdiagnostics-show-option -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse3 -fvisibility=hidden -fvisibility-inlines-hidden -Wno-shadow -Wno-unused -Wno-sign-compare -Wno-undef -Wno-missing-declarations -Wno-uninitialized -Wno-switch -Wno-parentheses -Wno-array-bounds -Wno-extra -Wno-deprecated-declarations -Wno-misleading-indentation -Wno-deprecated -Wno-suggest-override  -O3 -DNDEBUG  -DNDEBUG    -Wl,--gc-sections -Wl,--as-needed -Wl,--no-undefined  CMakeFiles/cmTC_cfc6c.dir/src.cxx.o  -o cmTC_cfc6c 
+make[1]: Leaving directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+
+
+===== END =====
+
+Build output check failed:
+    Regex: 'unrecognized .*option'
+    Output line: 'cc1plus: warning: unrecognized command line option ‘-Wno-implicit-const-int-float-conversion’'
+Compilation failed:
+    source file: '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.cxx'
+    check option: ' -Wno-implicit-const-int-float-conversion'
+===== BUILD LOG =====
+Change Dir: /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_c4b58/fast && /usr/bin/make -f CMakeFiles/cmTC_c4b58.dir/build.make CMakeFiles/cmTC_c4b58.dir/build
+make[1]: Entering directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_c4b58.dir/src.cxx.o
+/usr/bin/c++    -fsigned-char -W -Wall -Wreturn-type -Wnon-virtual-dtor -Waddress -Wsequence-point -Wformat -Wformat-security -Winit-self -Wpointer-arith -Wsign-promo -Wno-delete-non-virtual-dtor -Wno-comment -Wno-strict-overflow -fdiagnostics-show-option -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse3 -fvisibility=hidden -fvisibility-inlines-hidden -Wno-shadow -Wno-unused -Wno-sign-compare -Wno-undef -Wno-missing-declarations -Wno-uninitialized -Wno-switch -Wno-parentheses -Wno-array-bounds -Wno-extra -Wno-deprecated-declarations -Wno-misleading-indentation -Wno-deprecated -Wno-suggest-override -Wno-implicit-fallthrough -Wno-tautological-compare -Wno-reorder -Wno-unused-result  -O3 -DNDEBUG  -DNDEBUG -fPIE    -Wno-implicit-const-int-float-conversion -std=c++11 -o CMakeFiles/cmTC_c4b58.dir/src.cxx.o -c /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.cxx
+/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.cxx:1: warning: ignoring #pragma   [-Wunknown-pragmas]
+    1 | #pragma
+      | 
+cc1plus: warning: unrecognized command line option ‘-Wno-implicit-const-int-float-conversion’
+Linking CXX executable cmTC_c4b58
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_c4b58.dir/link.txt --verbose=1
+/usr/bin/c++     -fsigned-char -W -Wall -Wreturn-type -Wnon-virtual-dtor -Waddress -Wsequence-point -Wformat -Wformat-security -Winit-self -Wpointer-arith -Wsign-promo -Wno-delete-non-virtual-dtor -Wno-comment -Wno-strict-overflow -fdiagnostics-show-option -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse3 -fvisibility=hidden -fvisibility-inlines-hidden -Wno-shadow -Wno-unused -Wno-sign-compare -Wno-undef -Wno-missing-declarations -Wno-uninitialized -Wno-switch -Wno-parentheses -Wno-array-bounds -Wno-extra -Wno-deprecated-declarations -Wno-misleading-indentation -Wno-deprecated -Wno-suggest-override -Wno-implicit-fallthrough -Wno-tautological-compare -Wno-reorder -Wno-unused-result  -O3 -DNDEBUG  -DNDEBUG    -Wl,--gc-sections -Wl,--as-needed -Wl,--no-undefined  CMakeFiles/cmTC_c4b58.dir/src.cxx.o  -o cmTC_c4b58 
+make[1]: Leaving directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+
+
+===== END =====
+
+Build output check failed:
+    Regex: 'unrecognized .*option'
+    Output line: 'cc1plus: warning: unrecognized command line option ‘-Wno-nontrivial-memcall’'
+Compilation failed:
+    source file: '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.cxx'
+    check option: ' -Wno-nontrivial-memcall'
+===== BUILD LOG =====
+Change Dir: /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_067c1/fast && /usr/bin/make -f CMakeFiles/cmTC_067c1.dir/build.make CMakeFiles/cmTC_067c1.dir/build
+make[1]: Entering directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_067c1.dir/src.cxx.o
+/usr/bin/c++    -fsigned-char -W -Wall -Wreturn-type -Wnon-virtual-dtor -Waddress -Wsequence-point -Wformat -Wformat-security -Winit-self -Wpointer-arith -Wsign-promo -Wno-delete-non-virtual-dtor -Wno-comment -Wno-strict-overflow -fdiagnostics-show-option -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse3 -fvisibility=hidden -fvisibility-inlines-hidden -Wno-shadow -Wno-unused -Wno-sign-compare -Wno-undef -Wno-missing-declarations -Wno-uninitialized -Wno-switch -Wno-parentheses -Wno-array-bounds -Wno-extra -Wno-deprecated-declarations -Wno-misleading-indentation -Wno-deprecated -Wno-suggest-override -Wno-implicit-fallthrough -Wno-tautological-compare -Wno-reorder -Wno-unused-result  -O3 -DNDEBUG  -DNDEBUG -fPIE    -Wno-nontrivial-memcall -std=c++11 -o CMakeFiles/cmTC_067c1.dir/src.cxx.o -c /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.cxx
+/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.cxx:1: warning: ignoring #pragma   [-Wunknown-pragmas]
+    1 | #pragma
+      | 
+cc1plus: warning: unrecognized command line option ‘-Wno-nontrivial-memcall’
+Linking CXX executable cmTC_067c1
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_067c1.dir/link.txt --verbose=1
+/usr/bin/c++     -fsigned-char -W -Wall -Wreturn-type -Wnon-virtual-dtor -Waddress -Wsequence-point -Wformat -Wformat-security -Winit-self -Wpointer-arith -Wsign-promo -Wno-delete-non-virtual-dtor -Wno-comment -Wno-strict-overflow -fdiagnostics-show-option -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse3 -fvisibility=hidden -fvisibility-inlines-hidden -Wno-shadow -Wno-unused -Wno-sign-compare -Wno-undef -Wno-missing-declarations -Wno-uninitialized -Wno-switch -Wno-parentheses -Wno-array-bounds -Wno-extra -Wno-deprecated-declarations -Wno-misleading-indentation -Wno-deprecated -Wno-suggest-override -Wno-implicit-fallthrough -Wno-tautological-compare -Wno-reorder -Wno-unused-result  -O3 -DNDEBUG  -DNDEBUG    -Wl,--gc-sections -Wl,--as-needed -Wl,--no-undefined  CMakeFiles/cmTC_067c1.dir/src.cxx.o  -o cmTC_067c1 
+make[1]: Leaving directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+
+
+===== END =====
+
+Determining if the function sgemm_ exists failed with the following output:
+Change Dir: /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_88278/fast && /usr/bin/make -f CMakeFiles/cmTC_88278.dir/build.make CMakeFiles/cmTC_88278.dir/build
+make[1]: Entering directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_88278.dir/CheckFunctionExists.c.o
+/usr/bin/cc   -fsigned-char -W -Wall -Wreturn-type -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wuninitialized -Wno-comment -Wimplicit-fallthrough=3 -Wno-strict-overflow -fdiagnostics-show-option -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse3 -fvisibility=hidden -DCHECK_FUNCTION_EXISTS=sgemm_ -O3 -DNDEBUG  -DNDEBUG -fPIE   -o CMakeFiles/cmTC_88278.dir/CheckFunctionExists.c.o   -c /usr/share/cmake-3.16/Modules/CheckFunctionExists.c
+Linking C executable cmTC_88278
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_88278.dir/link.txt --verbose=1
+/usr/bin/cc    -fsigned-char -W -Wall -Wreturn-type -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wuninitialized -Wno-comment -Wimplicit-fallthrough=3 -Wno-strict-overflow -fdiagnostics-show-option -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse3 -fvisibility=hidden -DCHECK_FUNCTION_EXISTS=sgemm_ -O3 -DNDEBUG  -DNDEBUG    -Wl,--gc-sections -Wl,--as-needed -Wl,--no-undefined  CMakeFiles/cmTC_88278.dir/CheckFunctionExists.c.o  -o cmTC_88278 
+/usr/bin/ld: CMakeFiles/cmTC_88278.dir/CheckFunctionExists.c.o: in function `main':
+CheckFunctionExists.c:(.text.startup.main+0x10): undefined reference to `sgemm_'
+collect2: error: ld returned 1 exit status
+make[1]: *** [CMakeFiles/cmTC_88278.dir/build.make:87: cmTC_88278] Error 1
+make[1]: Leaving directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+make: *** [Makefile:121: cmTC_88278/fast] Error 2
+
+
+
+Determining if the function cheev_ exists failed with the following output:
+Change Dir: /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_c58a2/fast && /usr/bin/make -f CMakeFiles/cmTC_c58a2.dir/build.make CMakeFiles/cmTC_c58a2.dir/build
+make[1]: Entering directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_c58a2.dir/CheckFunctionExists.c.o
+/usr/bin/cc   -fsigned-char -W -Wall -Wreturn-type -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wuninitialized -Wno-comment -Wimplicit-fallthrough=3 -Wno-strict-overflow -fdiagnostics-show-option -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse3 -fvisibility=hidden -DCHECK_FUNCTION_EXISTS=cheev_ -O3 -DNDEBUG  -DNDEBUG -fPIE   -o CMakeFiles/cmTC_c58a2.dir/CheckFunctionExists.c.o   -c /usr/share/cmake-3.16/Modules/CheckFunctionExists.c
+Linking C executable cmTC_c58a2
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_c58a2.dir/link.txt --verbose=1
+/usr/bin/cc    -fsigned-char -W -Wall -Wreturn-type -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wuninitialized -Wno-comment -Wimplicit-fallthrough=3 -Wno-strict-overflow -fdiagnostics-show-option -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse3 -fvisibility=hidden -DCHECK_FUNCTION_EXISTS=cheev_ -O3 -DNDEBUG  -DNDEBUG    -Wl,--gc-sections -Wl,--as-needed -Wl,--no-undefined  CMakeFiles/cmTC_c58a2.dir/CheckFunctionExists.c.o  -o cmTC_c58a2  /usr/lib/x86_64-linux-gnu/libblas.so 
+/usr/bin/ld: CMakeFiles/cmTC_c58a2.dir/CheckFunctionExists.c.o: in function `main':
+CheckFunctionExists.c:(.text.startup.main+0x10): undefined reference to `cheev_'
+collect2: error: ld returned 1 exit status
+make[1]: *** [CMakeFiles/cmTC_c58a2.dir/build.make:88: cmTC_c58a2] Error 1
+make[1]: Leaving directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+make: *** [Makefile:121: cmTC_c58a2/fast] Error 2
+
+
+
+Build output check failed:
+    Regex: 'unrecognized .*option'
+    Output line: 'cc1plus: warning: unrecognized command line option ‘-Wno-tautological-undefined-compare’'
+Compilation failed:
+    source file: '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.cxx'
+    check option: ' -Wno-tautological-undefined-compare'
+===== BUILD LOG =====
+Change Dir: /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_81083/fast && /usr/bin/make -f CMakeFiles/cmTC_81083.dir/build.make CMakeFiles/cmTC_81083.dir/build
+make[1]: Entering directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_81083.dir/src.cxx.o
+/usr/bin/c++    -fsigned-char -W -Wall -Wreturn-type -Wnon-virtual-dtor -Waddress -Wsequence-point -Wformat -Wformat-security -Winit-self -Wpointer-arith -Wuninitialized -Wsuggest-override -Wno-delete-non-virtual-dtor -Wno-comment -Wimplicit-fallthrough=3 -Wno-strict-overflow -fdiagnostics-show-option -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse3 -fvisibility=hidden -fvisibility-inlines-hidden -Wno-deprecated -Wno-missing-declarations -Wno-shadow -Wno-unused-parameter -Wno-unused-local-typedefs -Wno-sign-compare -Wno-sign-promo -Wno-undef  -O3 -DNDEBUG  -DNDEBUG -fPIE    -Wno-tautological-undefined-compare -std=c++11 -o CMakeFiles/cmTC_81083.dir/src.cxx.o -c /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.cxx
+/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.cxx:1: warning: ignoring #pragma   [-Wunknown-pragmas]
+    1 | #pragma
+      | 
+cc1plus: warning: unrecognized command line option ‘-Wno-tautological-undefined-compare’
+Linking CXX executable cmTC_81083
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_81083.dir/link.txt --verbose=1
+/usr/bin/c++     -fsigned-char -W -Wall -Wreturn-type -Wnon-virtual-dtor -Waddress -Wsequence-point -Wformat -Wformat-security -Winit-self -Wpointer-arith -Wuninitialized -Wsuggest-override -Wno-delete-non-virtual-dtor -Wno-comment -Wimplicit-fallthrough=3 -Wno-strict-overflow -fdiagnostics-show-option -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse3 -fvisibility=hidden -fvisibility-inlines-hidden -Wno-deprecated -Wno-missing-declarations -Wno-shadow -Wno-unused-parameter -Wno-unused-local-typedefs -Wno-sign-compare -Wno-sign-promo -Wno-undef  -O3 -DNDEBUG  -DNDEBUG    -Wl,--gc-sections -Wl,--as-needed -Wl,--no-undefined  CMakeFiles/cmTC_81083.dir/src.cxx.o  -o cmTC_81083 
+make[1]: Leaving directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+
+
+===== END =====
+
+Build output check failed:
+    Regex: 'unrecognized .*option'
+    Output line: 'cc1plus: warning: unrecognized command line option ‘-Wno-shorten-64-to-32’'
+Compilation failed:
+    source file: '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.cxx'
+    check option: ' -Wno-shorten-64-to-32'
+===== BUILD LOG =====
+Change Dir: /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_2543d/fast && /usr/bin/make -f CMakeFiles/cmTC_2543d.dir/build.make CMakeFiles/cmTC_2543d.dir/build
+make[1]: Entering directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_2543d.dir/src.cxx.o
+/usr/bin/c++    -fsigned-char -W -Wall -Wreturn-type -Wnon-virtual-dtor -Waddress -Wsequence-point -Wformat -Wformat-security -Winit-self -Wpointer-arith -Wuninitialized -Wsuggest-override -Wno-delete-non-virtual-dtor -Wno-comment -Wimplicit-fallthrough=3 -Wno-strict-overflow -fdiagnostics-show-option -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse3 -fvisibility=hidden -fvisibility-inlines-hidden -Wno-deprecated -Wno-missing-declarations -Wno-shadow -Wno-unused-parameter -Wno-unused-local-typedefs -Wno-sign-compare -Wno-sign-promo -Wno-undef -Wno-ignored-qualifiers -Wno-extra -Wno-unused-function -Wno-unused-const-variable  -O3 -DNDEBUG  -DNDEBUG -fPIE    -Wno-shorten-64-to-32 -std=c++11 -o CMakeFiles/cmTC_2543d.dir/src.cxx.o -c /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.cxx
+/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.cxx:1: warning: ignoring #pragma   [-Wunknown-pragmas]
+    1 | #pragma
+      | 
+cc1plus: warning: unrecognized command line option ‘-Wno-shorten-64-to-32’
+Linking CXX executable cmTC_2543d
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_2543d.dir/link.txt --verbose=1
+/usr/bin/c++     -fsigned-char -W -Wall -Wreturn-type -Wnon-virtual-dtor -Waddress -Wsequence-point -Wformat -Wformat-security -Winit-self -Wpointer-arith -Wuninitialized -Wsuggest-override -Wno-delete-non-virtual-dtor -Wno-comment -Wimplicit-fallthrough=3 -Wno-strict-overflow -fdiagnostics-show-option -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse3 -fvisibility=hidden -fvisibility-inlines-hidden -Wno-deprecated -Wno-missing-declarations -Wno-shadow -Wno-unused-parameter -Wno-unused-local-typedefs -Wno-sign-compare -Wno-sign-promo -Wno-undef -Wno-ignored-qualifiers -Wno-extra -Wno-unused-function -Wno-unused-const-variable  -O3 -DNDEBUG  -DNDEBUG    -Wl,--gc-sections -Wl,--as-needed -Wl,--no-undefined  CMakeFiles/cmTC_2543d.dir/src.cxx.o  -o cmTC_2543d 
+make[1]: Leaving directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+
+
+===== END =====
+
+Build output check failed:
+    Regex: 'unrecognized .*option'
+    Output line: 'cc1plus: warning: unrecognized command line option ‘-Wno-enum-compare-switch’'
+Compilation failed:
+    source file: '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.cxx'
+    check option: ' -Wno-enum-compare-switch'
+===== BUILD LOG =====
+Change Dir: /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_a8f94/fast && /usr/bin/make -f CMakeFiles/cmTC_a8f94.dir/build.make CMakeFiles/cmTC_a8f94.dir/build
+make[1]: Entering directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_a8f94.dir/src.cxx.o
+/usr/bin/c++    -fsigned-char -W -Wall -Wreturn-type -Wnon-virtual-dtor -Waddress -Wsequence-point -Wformat -Wformat-security -Winit-self -Wpointer-arith -Wuninitialized -Wsuggest-override -Wno-delete-non-virtual-dtor -Wno-comment -Wimplicit-fallthrough=3 -Wno-strict-overflow -fdiagnostics-show-option -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse3 -fvisibility=hidden -fvisibility-inlines-hidden -Wno-deprecated -Wno-missing-declarations -Wno-shadow -Wno-unused-parameter -Wno-unused-local-typedefs -Wno-sign-compare -Wno-sign-promo -Wno-undef -Wno-ignored-qualifiers -Wno-extra -Wno-unused-function -Wno-unused-const-variable -Wno-invalid-offsetof  -O3 -DNDEBUG  -DNDEBUG -fPIE    -Wno-enum-compare-switch -std=c++11 -o CMakeFiles/cmTC_a8f94.dir/src.cxx.o -c /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.cxx
+/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.cxx:1: warning: ignoring #pragma   [-Wunknown-pragmas]
+    1 | #pragma
+      | 
+cc1plus: warning: unrecognized command line option ‘-Wno-enum-compare-switch’
+Linking CXX executable cmTC_a8f94
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_a8f94.dir/link.txt --verbose=1
+/usr/bin/c++     -fsigned-char -W -Wall -Wreturn-type -Wnon-virtual-dtor -Waddress -Wsequence-point -Wformat -Wformat-security -Winit-self -Wpointer-arith -Wuninitialized -Wsuggest-override -Wno-delete-non-virtual-dtor -Wno-comment -Wimplicit-fallthrough=3 -Wno-strict-overflow -fdiagnostics-show-option -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse3 -fvisibility=hidden -fvisibility-inlines-hidden -Wno-deprecated -Wno-missing-declarations -Wno-shadow -Wno-unused-parameter -Wno-unused-local-typedefs -Wno-sign-compare -Wno-sign-promo -Wno-undef -Wno-ignored-qualifiers -Wno-extra -Wno-unused-function -Wno-unused-const-variable -Wno-invalid-offsetof  -O3 -DNDEBUG  -DNDEBUG    -Wl,--gc-sections -Wl,--as-needed -Wl,--no-undefined  CMakeFiles/cmTC_a8f94.dir/src.cxx.o  -o cmTC_a8f94 
+make[1]: Leaving directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+
+
+===== END =====
+
+Build output check failed:
+    Regex: 'unrecognized .*option'
+    Output line: 'cc1plus: warning: unrecognized command line option ‘-Wno-stringop-overread’'
+Compilation failed:
+    source file: '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.cxx'
+    check option: ' -Wno-stringop-overread'
+===== BUILD LOG =====
+Change Dir: /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_9eefa/fast && /usr/bin/make -f CMakeFiles/cmTC_9eefa.dir/build.make CMakeFiles/cmTC_9eefa.dir/build
+make[1]: Entering directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_9eefa.dir/src.cxx.o
+/usr/bin/c++    -fsigned-char -W -Wall -Wreturn-type -Wnon-virtual-dtor -Waddress -Wsequence-point -Wformat -Wformat-security -Winit-self -Wpointer-arith -Wuninitialized -Wno-delete-non-virtual-dtor -Wno-comment -Wno-strict-overflow -fdiagnostics-show-option -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse3 -fvisibility=hidden -fvisibility-inlines-hidden -Wno-deprecated -Wno-missing-declarations -Wno-shadow -Wno-unused-parameter -Wno-unused-local-typedefs -Wno-sign-compare -Wno-sign-promo -Wno-undef -Wno-ignored-qualifiers -Wno-extra -Wno-unused-function -Wno-unused-const-variable -Wno-invalid-offsetof -Wno-suggest-override -Wno-implicit-fallthrough -Wno-array-bounds -Wno-stringop-overflow  -O3 -DNDEBUG  -DNDEBUG -fPIE    -Wno-stringop-overread -std=c++11 -o CMakeFiles/cmTC_9eefa.dir/src.cxx.o -c /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.cxx
+/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.cxx:1: warning: ignoring #pragma   [-Wunknown-pragmas]
+    1 | #pragma
+      | 
+cc1plus: warning: unrecognized command line option ‘-Wno-stringop-overread’
+Linking CXX executable cmTC_9eefa
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_9eefa.dir/link.txt --verbose=1
+/usr/bin/c++     -fsigned-char -W -Wall -Wreturn-type -Wnon-virtual-dtor -Waddress -Wsequence-point -Wformat -Wformat-security -Winit-self -Wpointer-arith -Wuninitialized -Wno-delete-non-virtual-dtor -Wno-comment -Wno-strict-overflow -fdiagnostics-show-option -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse3 -fvisibility=hidden -fvisibility-inlines-hidden -Wno-deprecated -Wno-missing-declarations -Wno-shadow -Wno-unused-parameter -Wno-unused-local-typedefs -Wno-sign-compare -Wno-sign-promo -Wno-undef -Wno-ignored-qualifiers -Wno-extra -Wno-unused-function -Wno-unused-const-variable -Wno-invalid-offsetof -Wno-suggest-override -Wno-implicit-fallthrough -Wno-array-bounds -Wno-stringop-overflow  -O3 -DNDEBUG  -DNDEBUG    -Wl,--gc-sections -Wl,--as-needed -Wl,--no-undefined  CMakeFiles/cmTC_9eefa.dir/src.cxx.o  -o cmTC_9eefa 
+make[1]: Leaving directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+
+
+===== END =====
+
+Build output check failed:
+    Regex: 'unrecognized .*option'
+    Output line: 'cc1plus: warning: unrecognized command line option ‘-Wno-comma’'
+Compilation failed:
+    source file: '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.cxx'
+    check option: ' -Wno-comma'
+===== BUILD LOG =====
+Change Dir: /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_e1d15/fast && /usr/bin/make -f CMakeFiles/cmTC_e1d15.dir/build.make CMakeFiles/cmTC_e1d15.dir/build
+make[1]: Entering directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_e1d15.dir/src.cxx.o
+/usr/bin/c++    -fsigned-char -W -Wall -Wreturn-type -Wnon-virtual-dtor -Waddress -Wsequence-point -Wformat -Wformat-security -Winit-self -Wpointer-arith -Wuninitialized -Wno-delete-non-virtual-dtor -Wno-comment -Wno-strict-overflow -fdiagnostics-show-option -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse3 -fvisibility=hidden -fvisibility-inlines-hidden -Wno-deprecated -Wno-missing-declarations -Wno-shadow -Wno-unused-parameter -Wno-unused-local-typedefs -Wno-sign-compare -Wno-sign-promo -Wno-undef -Wno-ignored-qualifiers -Wno-extra -Wno-unused-function -Wno-unused-const-variable -Wno-invalid-offsetof -Wno-suggest-override -Wno-implicit-fallthrough -Wno-array-bounds -Wno-stringop-overflow -Wno-extra-semi  -O3 -DNDEBUG  -DNDEBUG -fPIE    -Wno-comma -std=c++11 -o CMakeFiles/cmTC_e1d15.dir/src.cxx.o -c /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.cxx
+/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.cxx:1: warning: ignoring #pragma   [-Wunknown-pragmas]
+    1 | #pragma
+      | 
+cc1plus: warning: unrecognized command line option ‘-Wno-comma’
+Linking CXX executable cmTC_e1d15
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_e1d15.dir/link.txt --verbose=1
+/usr/bin/c++     -fsigned-char -W -Wall -Wreturn-type -Wnon-virtual-dtor -Waddress -Wsequence-point -Wformat -Wformat-security -Winit-self -Wpointer-arith -Wuninitialized -Wno-delete-non-virtual-dtor -Wno-comment -Wno-strict-overflow -fdiagnostics-show-option -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse3 -fvisibility=hidden -fvisibility-inlines-hidden -Wno-deprecated -Wno-missing-declarations -Wno-shadow -Wno-unused-parameter -Wno-unused-local-typedefs -Wno-sign-compare -Wno-sign-promo -Wno-undef -Wno-ignored-qualifiers -Wno-extra -Wno-unused-function -Wno-unused-const-variable -Wno-invalid-offsetof -Wno-suggest-override -Wno-implicit-fallthrough -Wno-array-bounds -Wno-stringop-overflow -Wno-extra-semi  -O3 -DNDEBUG  -DNDEBUG    -Wl,--gc-sections -Wl,--as-needed -Wl,--no-undefined  CMakeFiles/cmTC_e1d15.dir/src.cxx.o  -o cmTC_e1d15 
+make[1]: Leaving directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+
+
+===== END =====
+
+Determining if the include file sys/videoio.h exists failed with the following output:
+Change Dir: /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_0b8d1/fast && /usr/bin/make -f CMakeFiles/cmTC_0b8d1.dir/build.make CMakeFiles/cmTC_0b8d1.dir/build
+make[1]: Entering directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_0b8d1.dir/CheckIncludeFile.c.o
+/usr/bin/cc   -fsigned-char -W -Wall -Wreturn-type -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations -Wmissing-prototypes -Wstrict-prototypes -Wundef -Winit-self -Wpointer-arith -Wshadow -Wuninitialized -Wno-comment -Wimplicit-fallthrough=3 -Wno-strict-overflow -fdiagnostics-show-option -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse3 -fvisibility=hidden  -O3 -DNDEBUG  -DNDEBUG -fPIE   -o CMakeFiles/cmTC_0b8d1.dir/CheckIncludeFile.c.o   -c /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/CheckIncludeFile.c
+/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/CheckIncludeFile.c:1:10: fatal error: sys/videoio.h: No such file or directory
+    1 | #include <sys/videoio.h>
+      |          ^~~~~~~~~~~~~~~
+compilation terminated.
+make[1]: *** [CMakeFiles/cmTC_0b8d1.dir/build.make:66: CMakeFiles/cmTC_0b8d1.dir/CheckIncludeFile.c.o] Error 1
+make[1]: Leaving directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+make: *** [Makefile:121: cmTC_0b8d1/fast] Error 2
+
+
+
+Build output check failed:
+    Regex: 'unrecognized .*option'
+    Output line: 'cc1plus: warning: unrecognized command line option ‘-Wno-unused-private-field’'
+Compilation failed:
+    source file: '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.cxx'
+    check option: ' -Wno-unused-private-field'
+===== BUILD LOG =====
+Change Dir: /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/bin/make cmTC_18375/fast && /usr/bin/make -f CMakeFiles/cmTC_18375.dir/build.make CMakeFiles/cmTC_18375.dir/build
+make[1]: Entering directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_18375.dir/src.cxx.o
+/usr/bin/c++    -fsigned-char -W -Wall -Wreturn-type -Wnon-virtual-dtor -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations -Wundef -Winit-self -Wpointer-arith -Wshadow -Wsign-promo -Wuninitialized -Wsuggest-override -Wno-delete-non-virtual-dtor -Wno-comment -Wimplicit-fallthrough=3 -Wno-strict-overflow -fdiagnostics-show-option -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse3 -fvisibility=hidden -fvisibility-inlines-hidden -Wno-unused-function -Wno-deprecated-declarations -Wno-overloaded-virtual  -O3 -DNDEBUG  -DNDEBUG -fPIE    -Wno-unused-private-field -std=c++11 -o CMakeFiles/cmTC_18375.dir/src.cxx.o -c /home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.cxx
+/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp/src.cxx:1: warning: ignoring #pragma   [-Wunknown-pragmas]
+    1 | #pragma
+      | 
+cc1plus: warning: unrecognized command line option ‘-Wno-unused-private-field’
+Linking CXX executable cmTC_18375
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_18375.dir/link.txt --verbose=1
+/usr/bin/c++     -fsigned-char -W -Wall -Wreturn-type -Wnon-virtual-dtor -Waddress -Wsequence-point -Wformat -Wformat-security -Wmissing-declarations -Wundef -Winit-self -Wpointer-arith -Wshadow -Wsign-promo -Wuninitialized -Wsuggest-override -Wno-delete-non-virtual-dtor -Wno-comment -Wimplicit-fallthrough=3 -Wno-strict-overflow -fdiagnostics-show-option -pthread -fomit-frame-pointer -ffunction-sections -fdata-sections  -msse3 -fvisibility=hidden -fvisibility-inlines-hidden -Wno-unused-function -Wno-deprecated-declarations -Wno-overloaded-virtual  -O3 -DNDEBUG  -DNDEBUG    -Wl,--gc-sections -Wl,--as-needed -Wl,--no-undefined  CMakeFiles/cmTC_18375.dir/src.cxx.o  -o cmTC_18375 
+make[1]: Leaving directory '/home/ash/ca-territorial/build/CMakeFiles/CMakeTmp'
+
+
+===== END =====
+
