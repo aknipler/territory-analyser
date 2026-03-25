@@ -1,0 +1,26 @@
+[
+{
+  "directory": "/home/ashk/projects/territory-analyser/build",
+  "command": "/usr/bin/g++  -I/home/ashk/projects/territory-analyser/src -I/home/ashk/projects/territory-analyser/include -isystem /usr/local/include/opencv4 -g -o CMakeFiles/Territory-Analyser.dir/main.cpp.o -c /home/ashk/projects/territory-analyser/main.cpp",
+  "file": "/home/ashk/projects/territory-analyser/main.cpp",
+  "output": "CMakeFiles/Territory-Analyser.dir/main.cpp.o"
+},
+{
+  "directory": "/home/ashk/projects/territory-analyser/build",
+  "command": "/usr/bin/g++  -I/home/ashk/projects/territory-analyser/src -I/home/ashk/projects/territory-analyser/include -isystem /usr/local/include/opencv4 -g -o CMakeFiles/Territory-Analyser.dir/src/territory_analyser.cpp.o -c /home/ashk/projects/territory-analyser/src/territory_analyser.cpp",
+  "file": "/home/ashk/projects/territory-analyser/src/territory_analyser.cpp",
+  "output": "CMakeFiles/Territory-Analyser.dir/src/territory_analyser.cpp.o"
+},
+{
+  "directory": "/home/ashk/projects/territory-analyser/build",
+  "command": "/usr/bin/g++  -I/home/ashk/projects/territory-analyser/src -I/home/ashk/projects/territory-analyser/include -isystem /usr/local/include/opencv4 -g -o CMakeFiles/Territory-Analyser.dir/src/grid.cpp.o -c /home/ashk/projects/territory-analyser/src/grid.cpp",
+  "file": "/home/ashk/projects/territory-analyser/src/grid.cpp",
+  "output": "CMakeFiles/Territory-Analyser.dir/src/grid.cpp.o"
+},
+{
+  "directory": "/home/ashk/projects/territory-analyser/build",
+  "command": "/usr/bin/g++  -I/home/ashk/projects/territory-analyser/src -I/home/ashk/projects/territory-analyser/include -isystem /usr/local/include/opencv4 -g -o CMakeFiles/Territory-Analyser.dir/src/aux.cpp.o -c /home/ashk/projects/territory-analyser/src/aux.cpp",
+  "file": "/home/ashk/projects/territory-analyser/src/aux.cpp",
+  "output": "CMakeFiles/Territory-Analyser.dir/src/aux.cpp.o"
+}
+]

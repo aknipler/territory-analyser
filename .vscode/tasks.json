@@ -1,6 +1,21 @@
 {
     "tasks": [
         {
+            "label": "build",
+            "type": "shell",
+            "command": "${command:cmake.buildCurrentTarget}",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "options": {
+                "cwd": "${workspaceFolder}/build"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ]
+        },
+        {
             "type": "cppbuild",
             "label": "C/C++: g++ build active file",
             "command": "/usr/bin/g++",
@@ -8,8 +23,16 @@
                 "-fdiagnostics-color=always",
                 "-g",
                 "${file}",
+                "${workspaceFolder}/*.cpp",
                 "-o",
-                "${fileDirname}/${fileBasenameNoExtension}"
+                "${fileDirname}/${fileBasenameNoExtension}",
+                "-I/usr/local/include/opencv4", // Include path
+                "-L/usr/local/lib", // Library path
+                "-lopencv_imgcodecs", // Example library flags
+                "-lopencv_core",
+                "-lpthread",
+                "-lopencv_highgui",
+                "-lopencv_imgproc"
             ],
             "options": {
                 "cwd": "${fileDirname}"
