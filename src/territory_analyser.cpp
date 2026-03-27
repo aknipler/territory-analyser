@@ -2,12 +2,10 @@
 
 #include "../include/territory_analyser.h"
 // #include "grid.h"
-#include <iostream>
-#include <array>
 
 // Constructor to initialize the dynamic 2D array
 TerritoryAnalyser::TerritoryAnalyser(int givenSize, int numPlayers, int numTeams, std::map<int, int> teamAssignments) 
-    : size(givenSize), masterPlayerBoard(givenSize, std::vector<double>(givenSize, 0)), masterPlayerBoardEdges(givenSize, std::vector<double>(givenSize, 0)), masterPlayerBoardFill(givenSize, std::vector<double>(givenSize, 0)), numPlayers(numPlayers), numTeams(numTeams), teamAssignments(teamAssignments) {
+    : size(givenSize), masterPlayerBoard(givenSize, std::vector<double>(givenSize, 0)), masterPlayerBoardEdges(givenSize, std::vector<size_t>(givenSize, 0)), masterPlayerBoardFill(givenSize, std::vector<size_t>(givenSize, 0)), numPlayers(numPlayers), numTeams(numTeams), teamAssignments(teamAssignments) {
 
     if (teamAssignments.size() != numPlayers) {
         std::cerr << "Error: teamAssignments size must match numPlayers." << std::endl;
@@ -34,22 +32,6 @@ TerritoryAnalyser::TerritoryAnalyser(int givenSize, int numPlayers, int numTeams
 }
 
 
-std::vector<std::vector<double>> TerritoryAnalyser::getMasterBoard(std::string type) const {
-    if (type == "player") {
-        return masterPlayerBoard;
-    } else if (type == "player edges") {
-        return masterPlayerBoardEdges;
-    } else if (type == "player fill") {
-        return masterPlayerBoardFill;
-    } else if (type == "team") {
-        return masterTeamBoard;
-    } else if (type == "team edges") {
-        return masterTeamBoardEdges;
-    } else if (type == "team fill") {
-        return masterTeamBoardFill;
-    }
-    return masterPlayerBoard;
-}
 
 
 void TerritoryAnalyser::addBuilding(size_t x, size_t y, std::string building, int player, int team) {
@@ -64,6 +46,17 @@ void TerritoryAnalyser::addBuilding(size_t x, size_t y, std::string building, in
     // update the boolean grids for the player and team based on the new territory values, only in the area of the new territory to save time
     playerGrids.at(player).terrainBoolPass(3, bounds);    
     teamGrids.at(team).terrainBoolPass(3, bounds);
+
+    // merge the boards
+    this->mapMergedTerritories();
+    
+    // Set edge boards
+    this->masterPlayerBoardEdges = findEdges(this->getMasterBoard("player"), "threeBox");
+    this->masterTeamBoardEdges = findEdges(this->getMasterBoard("team"), "threeBox");
+
+    // Set fill boards
+
+
 
 }
 
@@ -123,10 +116,6 @@ void TerritoryAnalyser::mapMergedTerritories() {
 
     Grid mergedPlayerBoard(size), mergedTeamBoard(size);
     int counter = 1;
-    std::cout << "Merging player boards..." << std::endl;
-    for (const auto& element : teamAssignments) {
-        std::cout << element.first << ": " << element.second << std::endl;
-    }
     for (const auto& pair : playerGrids) {
         mergedPlayerBoard.addBoard(pair.second.getDataBool(), counter);
         counter = counter * 2;
@@ -142,6 +131,41 @@ void TerritoryAnalyser::mapMergedTerritories() {
 }
 
 
+std::vector<std::vector<double>> TerritoryAnalyser::getMasterBoard(std::string type) const {
+    if (type == "player") {
+        return masterPlayerBoard;
+    } else if (type == "team") {
+        return masterTeamBoard;
+    } else {
+        std::cerr << "Error: Invalid board type specified. Returning player board by default." << std::endl;
+        return masterPlayerBoard;
+    }
+}
+
+std::vector<std::vector<size_t>> TerritoryAnalyser::getMasterBoardEdges(std::string type) const {
+    if (type == "player edges") {
+        return masterPlayerBoardEdges;
+    } else if (type == "team edges") {
+        return masterTeamBoardEdges;
+    } else {
+        std::cerr << "Error: Invalid board type specified. Returning player edges board by default." << std::endl;
+        return masterPlayerBoardEdges;
+    }
+}
+
+
+std::vector<std::vector<size_t>> TerritoryAnalyser::getMasterBoardFill(std::string type) const {
+    if (type == "player fill") {
+        return masterPlayerBoardFill;
+    } else if (type == "team fill") {
+        return masterTeamBoardFill;
+    } else {
+        std::cerr << "Error: Invalid board type specified. Returning player fill board by default." << std::endl;
+        return masterPlayerBoardFill;
+    }
+}
+
+
 std::tuple<cv::Mat, cv::Mat> TerritoryAnalyser::colour_pass() {
 
 
@@ -149,10 +173,11 @@ std::tuple<cv::Mat, cv::Mat> TerritoryAnalyser::colour_pass() {
     std::array<std::vector<std::vector<double>>, 2> boards = {masterPlayerBoard, masterTeamBoard};
     std::tuple<cv::Mat, cv::Mat> output;
     
-    cv::Mat mat(size,size, CV_8UC3), matPlayer(size, size, CV_8UC3), matTeam(size, size, CV_8UC3);
+    cv::Mat mat(size,size, CV_8UC4), matPlayer(size, size, CV_8UC4), matTeam(size, size, CV_8UC4);
     
     // create new board
     std::vector<std::vector<double>> board(size, std::vector<double>(size, 0));
+    std::vector<std::vector<size_t>> edge_board(size, std::vector<size_t>(size, 0)), fill_board(size, std::vector<size_t>(size, 0));
 
     for (const auto& masterBoard : boards) {
 
@@ -162,30 +187,56 @@ std::tuple<cv::Mat, cv::Mat> TerritoryAnalyser::colour_pass() {
                 board[i][j] = masterBoard[i][j];
             }
         }
-        bool existing_val = false;
+        if (masterBoard == masterPlayerBoard) {
+            edge_board = masterPlayerBoardEdges;
+            fill_board = masterPlayerBoardFill;
+        } else {
+            edge_board = masterTeamBoardEdges;
+            fill_board = masterTeamBoardFill;
+        }
+        bool existing_val = false, is_edge = false;
 
         // For now, we make contested areas grey, the other idea was to have it be perpendicular lines of the two/multiple players, but that is more complex to implement and may not be worth the effort for the visualisation.
-        std::map<int, cv::Scalar> pl_colours = {{0, cv::Scalar(0, 0, 0)}, // Unoccupied - black
-                    {1, cv::Scalar(255, 0, 0)},   // Player 1 - blue
-                    {2, cv::Scalar(0, 0, 255)},   // Player 2 - red
-                    {3, cv::Scalar(0, 255, 0)},   // Player 3 - green
-                    {4, cv::Scalar(170, 170, 170)}}; // Contested - grey
+        std::size_t edgeOpacity = 255, territoryOpacity = 111;
+        std::map<int, cv::Vec4b> pl_colours = {
+                    {0, cv::Vec4b(0, 0, 0, 255)}, // Unoccupied - black
+                    {1, cv::Vec4b(255, 0, 0, 255)},   // Player 1 - blue
+                    {2, cv::Vec4b(0, 0, 255, 255)},   // Player 2 - red
+                    {3, cv::Vec4b(0, 255, 0, 255)},   // Player 3 - green
+                    {4, cv::Vec4b(170, 170, 170, 255)}}; // Contested - grey
 
         for (size_t i = 0; i < board.size(); ++i) {
             for (size_t j = 0; j < board.size(); ++j) {
                 existing_val = false;
+                is_edge = false;
                 if (board[i][j] == 0) {
-                    mat.at<cv::Vec3b>(i, j) = cv::Vec3b(pl_colours[0][0], pl_colours[0][1], pl_colours[0][2]);
+                    mat.at<cv::Vec4b>(i, j) = pl_colours[0];
                     continue;
                 }
                 for (size_t k=8; k>0; k--) {
-                    if (static_cast<int>(board[i][j])/static_cast<int>(std::pow(2, k-1)) >= 1) {
+                    
+                    if (static_cast<int>(edge_board[i][j])/static_cast<int>(std::pow(2, k-1)) >= 1) { // check if the cell is an edge for player k
+                        edge_board[i][j] = static_cast<double>(static_cast<int>(edge_board[i][j]) % static_cast<int>(std::pow(2, k-1))); // remove the highest power of 2 to find out if there are multiple players in the cell
+                        if (!existing_val) { // if the cell is currently unoccupied, assign it to the player
+                            mat.at<cv::Vec4b>(i, j) = pl_colours[k];
+                            mat.at<cv::Vec4b>(i, j)[3] = edgeOpacity; // Set the alpha channel for territory opacity
+                            existing_val = true;
+                            is_edge = true;
+                        } else { // if the cell is already occupied, mark it as contested
+                            mat.at<cv::Vec4b>(i, j) = pl_colours[4]; // Contested - grey
+                            mat.at<cv::Vec4b>(i, j)[3] = edgeOpacity; // Set the alpha channel for territory opacity
+                            break; // no need to check further players since it's already contested
+                        }
+                    }
+                    else if (!is_edge && static_cast<int>(board[i][j])/static_cast<int>(std::pow(2, k-1)) >= 1) {
                         board[i][j] = static_cast<double>(static_cast<int>(board[i][j]) % static_cast<int>(std::pow(2, k-1))); // remove the highest power of 2 to find out if there are multiple players in the cell
                         if (!existing_val) { // if the cell is currently unoccupied, assign it to the player
-                            mat.at<cv::Vec3b>(i, j) = cv::Vec3b(static_cast<uchar>(pl_colours[k][0]), static_cast<uchar>(pl_colours[k][1]), static_cast<uchar>(pl_colours[k][2]));
+                            mat.at<cv::Vec4b>(i, j) = pl_colours[k];
+                            mat.at<cv::Vec4b>(i, j)[3] = territoryOpacity; // Set the alpha channel for territory opacity
                             existing_val = true;
                         } else { // if the cell is already occupied, mark it as contested
-                            mat.at<cv::Vec3b>(i, j) = cv::Vec3b(static_cast<uchar>(pl_colours[4][0]), static_cast<uchar>(pl_colours[4][1]), static_cast<uchar>(pl_colours[4][2])); // Contested - grey
+                            mat.at<cv::Vec4b>(i, j) = pl_colours[4]; // Contested - grey
+                            mat.at<cv::Vec4b>(i, j)[3] = territoryOpacity; // Set the alpha channel for territory opacity
                             break; // no need to check further players since it's already contested
                         }
                     }

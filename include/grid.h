@@ -59,9 +59,9 @@ class Grid {
 
 // helper functions
 template <typename T>
-std::vector<std::vector<int>> findEdges(std::vector<std::vector<T>> board, std::string mode="threeBox") {
+std::vector<std::vector<size_t>> findEdges(std::vector<std::vector<T>> board, std::string mode="threeBox") {
 
-    std::vector<std::vector<int>> detEdges(board.size(), std::vector<int>(board.size(), 0));
+    std::vector<std::vector<size_t>> detEdges(board.size(), std::vector<size_t>(board.size(), 0));
 
     if (mode=="threeBox") {
         // we check 3 items, ij, the next in the row and the next in the column.

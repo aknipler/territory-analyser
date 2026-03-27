@@ -37,24 +37,20 @@ int main() {
         analyser.printPlayerBoards();
     }
 
-    // merge boards
-    analyser.mapMergedTerritories();
-    std::cout << "Combined Board:" << std::endl;
-    printBoard(analyser.getMasterBoard("player"));
-    std::cout << std::endl;
-
-
-
-    // Find edges
-    std::cout << "Comb Board edges:" << std::endl;
-    printBoard(findEdges(analyser.getMasterBoard("player"), "threeBox"),0);
-
     // Final display using OpenCV example
     cv::Mat final_output, final_output_team;
     std::cout << "Territory Analyser results" << std::endl;
     std::tie(final_output, final_output_team) = analyser.colour_pass();
 
     createDirectoryIfNotExists("output");
+    if (final_output.empty()) {
+        std::cerr << "Error: Could not create final output image." << std::endl;
+        return 1;
+    }
+    if (final_output_team.empty()) {
+        std::cerr << "Error: Could not create final team output image." << std::endl;
+        return 1;
+    }
     cv::imwrite("output/Territory Analyser Results.png", final_output);
     cv::imwrite("output/Territory Analyser Results Team.png", final_output_team);
 
