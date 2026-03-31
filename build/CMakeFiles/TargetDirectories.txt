@@ -1,3 +1,0 @@
-/home/ashk/projects/territory-analyser/build/CMakeFiles/Territory-Analyser.dir
-/home/ashk/projects/territory-analyser/build/CMakeFiles/edit_cache.dir
-/home/ashk/projects/territory-analyser/build/CMakeFiles/rebuild_cache.dir
