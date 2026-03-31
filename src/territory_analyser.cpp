@@ -5,7 +5,9 @@
 
 // Constructor to initialize the dynamic 2D array
 TerritoryAnalyser::TerritoryAnalyser(int givenSize, int numPlayers, int numTeams, std::map<int, int> teamAssignments) 
-    : size(givenSize), masterPlayerBoard(givenSize, std::vector<double>(givenSize, 0)), masterPlayerBoardEdges(givenSize, std::vector<size_t>(givenSize, 0)), masterPlayerBoardFill(givenSize, std::vector<size_t>(givenSize, 0)), numPlayers(numPlayers), numTeams(numTeams), teamAssignments(teamAssignments) {
+    : size(givenSize), numPlayers(numPlayers), numTeams(numTeams), teamAssignments(teamAssignments), gaia_board(givenSize, std::vector<size_t>(givenSize, 0)),
+    masterPlayerBoard(givenSize, std::vector<double>(givenSize, 0)), masterPlayerBoardEdges(givenSize, std::vector<size_t>(givenSize, 0)), masterPlayerBoardFill(givenSize, std::vector<size_t>(givenSize, 0)), 
+    masterTeamBoard(givenSize, std::vector<double>(givenSize, 0)), masterTeamBoardEdges(givenSize, std::vector<size_t>(givenSize, 0)), masterTeamBoardFill(givenSize, std::vector<size_t>(givenSize, 0)) {
 
     if (teamAssignments.size() != numPlayers) {
         std::cerr << "Error: teamAssignments size must match numPlayers." << std::endl;
@@ -15,6 +17,9 @@ TerritoryAnalyser::TerritoryAnalyser(int givenSize, int numPlayers, int numTeams
     building_dict["House"] = std::make_tuple(2,2);
     building_dict["Barracks"] = std::make_tuple(4,3);
     building_dict["Blacksmith"] = std::make_tuple(3,2);
+    building_dict["Tree"] = std::make_tuple(1,1);
+    building_dict["Gold Mine"] = std::make_tuple(1,1);
+    building_dict["Cliff"] = std::make_tuple(1,1);
 
     for (size_t i = 1; i <= numPlayers; ++i) {
         playerGrids.insert({i, Grid(size)});
@@ -24,9 +29,16 @@ TerritoryAnalyser::TerritoryAnalyser(int givenSize, int numPlayers, int numTeams
     }
     for (size_t i = 0; i < size; ++i) {
         for (size_t j = 0; j < size; ++j) {
+
+            gaia_board[i][j] = 0; 
+
             masterPlayerBoard[i][j] = 0;
             masterPlayerBoardEdges[i][j] = 0;
             masterPlayerBoardFill[i][j] = 0;
+            
+            masterTeamBoard[i][j] = 0;
+            masterTeamBoardEdges[i][j] = 0;
+            masterTeamBoardFill[i][j] = 0;
         }
     }
 }
@@ -34,19 +46,37 @@ TerritoryAnalyser::TerritoryAnalyser(int givenSize, int numPlayers, int numTeams
 
 
 
-void TerritoryAnalyser::addBuilding(size_t x, size_t y, std::string building, int player, int team) {
+void TerritoryAnalyser::updateBuilding(size_t x, size_t y, std::string building, int player, int team, std::string mod) {
 
     size_t r, weight, minRow, maxRow, minCol, maxCol;
     // AK: need to implement a try and except i.e. getRWeight() function or something
-    std::tie(r,weight) = building_dict[building];
+    try {
+        std::tie(r,weight) = building_dict.at(building);
+    } catch (const std::out_of_range& e) {
+        std::cerr << "Error: Building type '" << building << "' not found in building_dict." << std::endl;
+        // Can set to automatically use a default value for r, such as the dark age vision of the building.
+        return;
+    }
 
-    // adds territory to both player and team grids
-    std::tuple bounds = addTerritory(x,y,r,player,weight);
+    // updates territory to both player and team grids
+    if (mod == "add") {
+        weight = weight;
+    } else if (mod == "remove") {
+        weight = -weight;
+    } else {
+        std::cerr << "Error: Invalid modification type specified. Use 'add' or 'remove'." << std::endl;
+        return;
+    }
+    std::tuple bounds = updateTerritory(x,y,r,player,weight);
 
     // update the boolean grids for the player and team based on the new territory values, only in the area of the new territory to save time
+    if (player == 0) { // if player is Gaia, we don't need to update anything else 
+        return;
+    }
+    
     playerGrids.at(player).terrainBoolPass(3, bounds);    
     teamGrids.at(team).terrainBoolPass(3, bounds);
-
+    
     // merge the boards
     this->mapMergedTerritories();
     
@@ -61,10 +91,10 @@ void TerritoryAnalyser::addBuilding(size_t x, size_t y, std::string building, in
 }
 
 
-std::tuple <std::size_t,std::size_t,std::size_t,std::size_t> TerritoryAnalyser::addTerritory(size_t centerX, size_t centerY, size_t r, size_t player, size_t weighting, size_t soft_edge) {
+std::tuple <std::size_t,std::size_t,std::size_t,std::size_t> TerritoryAnalyser::updateTerritory(size_t centerX, size_t centerY, size_t r, size_t player, size_t weighting, size_t soft_edge) {
     // adds a filled circle of values centered on coordinates x,y to the dataTruth array
     
-    size_t x, y, d, threshold;
+    size_t x, y, d;
     double xDiff, yDiff, dist;
     
     r = r+soft_edge; // to merge territory smoothly
@@ -75,18 +105,24 @@ std::tuple <std::size_t,std::size_t,std::size_t,std::size_t> TerritoryAnalyser::
            minCol = std::max(0, static_cast<int>(centerY - r)),
            maxCol = std::min(static_cast<int>(size - 1), static_cast<int>(centerY + r + 1));
 
-    threshold = weighting;
-            
-    // iterate rows (centerX) then cols (centerY) and index as dataTruth[row][col]
-    for (x = minRow; x < maxRow; ++x) {
-        double xDiff = double(x) - double(centerX);
-        for (y = minCol; y < maxCol; ++y) {
-            double yDiff = double(y) - double(centerY);
-            dist = std::sqrt((xDiff * xDiff) + (yDiff * yDiff));
+    // if player is Gaia
+    if (player == 0) {
+        gaia_board[centerX][centerY] += sgn(weighting); 
+    } else {
+        // iterate rows (centerX) then cols (centerY) and index as dataTruth[row][col]
+        for (x = minRow; x < maxRow; ++x) {
 
-            // update the player and team grids with the new territory values
-            playerGrids.at(player).setValue(x,y, playerGrids.at(player).getValue(x,y) + ((dist > r) ? 0 : std::min(double(r - dist), double(weighting))));
-            teamGrids.at(teamAssignments.at(player)).setValue(x,y, teamGrids.at(teamAssignments.at(player)).getValue(x,y) + ((dist > r) ? 0 : std::min(double(r - dist), double(weighting))));
+            xDiff = double(x) - double(centerX);
+
+            for (y = minCol; y < maxCol; ++y) {
+
+                yDiff = double(y) - double(centerY);
+                dist = std::sqrt((xDiff * xDiff) + (yDiff * yDiff));
+
+                // update the player and team grids with the new territory values
+                playerGrids.at(player).setValue(x,y, playerGrids.at(player).getValue(x,y) + ((dist > r) ? 0 : std::min(double(r - dist), double(weighting))));
+                teamGrids.at(teamAssignments.at(player)).setValue(x,y, teamGrids.at(teamAssignments.at(player)).getValue(x,y) + ((dist > r) ? 0 : std::min(double(r - dist), double(weighting))));
+            }
         }
     }
 
@@ -109,6 +145,9 @@ void TerritoryAnalyser::printPlayerBoards() {
 
         counter += 1;
     }
+    std::cout << "Gaia Board:" << std::endl;
+    ::printBoard(gaia_board);
+    std::cout << std::endl;
 }
     
 
@@ -199,7 +238,7 @@ std::tuple<cv::Mat, cv::Mat> TerritoryAnalyser::colour_pass() {
         // For now, we make contested areas grey, the other idea was to have it be perpendicular lines of the two/multiple players, but that is more complex to implement and may not be worth the effort for the visualisation.
         std::size_t edgeOpacity = 255, territoryOpacity = 111;
         std::map<int, cv::Vec4b> pl_colours = {
-                    {0, cv::Vec4b(0, 0, 0, 255)}, // Unoccupied - black
+                    {0, cv::Vec4b(0, 0, 0, 255)}, // Unoccupied or gaia - black
                     {1, cv::Vec4b(255, 0, 0, 255)},   // Player 1 - blue
                     {2, cv::Vec4b(0, 0, 255, 255)},   // Player 2 - red
                     {3, cv::Vec4b(0, 255, 0, 255)},   // Player 3 - green
@@ -209,7 +248,7 @@ std::tuple<cv::Mat, cv::Mat> TerritoryAnalyser::colour_pass() {
             for (size_t j = 0; j < board.size(); ++j) {
                 existing_val = false;
                 is_edge = false;
-                if (board[i][j] == 0) {
+                if (board[i][j] == 0 || gaia_board[i][j] == 1) { // if the cell is unoccupied or occupied by gaia, mark it as black
                     mat.at<cv::Vec4b>(i, j) = pl_colours[0];
                     continue;
                 }

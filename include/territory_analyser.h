@@ -1,6 +1,7 @@
 #pragma once
 
 #include "grid.h"
+#include "aux.h"
 #include <vector>
 #include <map>
 #include <unordered_map>
@@ -19,6 +20,7 @@ class TerritoryAnalyser {
         std::map<int, Grid> teamGrids; // map to hold the grids of all teams
         std::map<int, int> teamAssignments; // map to hold the team assignments of each player
         size_t size;
+        std::vector<std::vector<size_t>> gaia_board; 
         std::vector<std::vector<double>> masterPlayerBoard;
         std::vector<std::vector<size_t>> masterPlayerBoardEdges;
         std::vector<std::vector<size_t>> masterPlayerBoardFill;
@@ -34,9 +36,9 @@ class TerritoryAnalyser {
         // Constructor to initialize the dynamic 2D array
         TerritoryAnalyser(int givenSize, int numPlayers, int numTeams, std::map<int, int> teamAssignments);
                 
-        void addBuilding(size_t x, size_t y, std::string building, int player, int team);
+        void updateBuilding(size_t x, size_t y, std::string building, int player, int team, std::string mod);
 
-        std::tuple <std::size_t,std::size_t,std::size_t,std::size_t> addTerritory(size_t centerX, size_t centerY, size_t r, size_t player, size_t weighting=5, size_t soft_edge=4);
+        std::tuple <std::size_t,std::size_t,std::size_t,std::size_t> updateTerritory(size_t centerX, size_t centerY, size_t r, size_t player, size_t weighting=5, size_t soft_edge=4);
                 
         void mapMergedTerritories();
         

@@ -2,4 +2,29 @@
 
 ## Setup 
 
-Doesn't need any external libraries. Just download, go to main.cpp and run.
+1. The project uses OpenCV to turn the output arrays into color mats. You can install OpenCV by following the instructions here: https://docs.opencv.org/4.x/df/d65/tutorial_table_of_content_introduction.html
+
+2. Use CMakeBuild and then run main.cpp.
+
+
+## Usage
+
+### Workflow
+
+There is a simple 3 step process:
+
+1. Initialise your system (map size, players, teams, neutral objects).
+2. Add player-controlled objects (i.e. buildings) to the grids using analyser.addBuilding(x,y,building,player,team)
+3. Perform the colour pass to render all the layers into a final image, std::tie(final_output, final_output_team) = analyser.colour_pass()
+*. Perform steps 2 and 3 again as needed.
+
+### Color pass
+
+The color pass takes all the information in the system (neutral objects, edges of territory, territory and fill-in closed-shape territory) and layers them into a final output. The priority is:
+
+1. Neutral objects on top
+2. Edges 
+3. Territory
+4. Fill is last
+
+This method deals simply with an enemy's object being shown when inside of a filled shape.

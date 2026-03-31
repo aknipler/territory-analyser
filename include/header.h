@@ -1,4 +1,4 @@
-
+#pragma once
 #include "territory_analyser.h"
 #include "grid.h"
 #include "aux.h"
