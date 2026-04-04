@@ -14,7 +14,7 @@
 There is a simple 3 step process:
 
 1. Initialise your system (map size, players, teams, neutral objects).
-2. Add player-controlled objects (i.e. buildings) to the grids using analyser.addBuilding(x,y,building,player,team)
+2. Add player-controlled objects (i.e. buildings) to the grids using analyser.updateBuilding(x,y,building,player,team,type) // type = "add" or "remove"
 3. Perform the colour pass to render all the layers into a final image, std::tie(final_output, final_output_team) = analyser.colour_pass()
 *. Perform steps 2 and 3 again as needed.
 
