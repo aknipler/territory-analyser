@@ -4,7 +4,43 @@
 
 1. The project uses OpenCV to turn the output arrays into color mats. You can install OpenCV by following the instructions here: https://docs.opencv.org/4.x/df/d65/tutorial_table_of_content_introduction.html
 
-2. Use CMakeBuild and then run main.cpp.
+2. Ensure that GCC and G++ are 17+ compatible. If on Linux, run
+
+sudo apt update && sudo apt upgrade gcc g++
+
+If using VS Code, will need to update C/C++ properties JSON file. Open Command Palette and search for C/C++: Edit Configurations (JSON). Add 
+    "/usr/local/include/opencv4",
+
+Also in .vscode/tasks.json add the following lines to the cppbuild args section:
+
+    "${workspaceFolder}/*.cpp",
+    "-I/usr/local/include/opencv4", // Include path
+    "-L/usr/local/lib", // Library path
+    "-lopencv_imgcodecs", // Example library flags
+    "-lopencv_core",
+    "-lpthread",
+    "-lopencv_highgui",
+    "-lopencv_imgproc"
+
+It may also be helpful to add this section above the curly braces of the cpp build:
+
+    {
+        "label": "build",
+        "type": "shell",
+        "command": "${command:cmake.buildCurrentTarget}",
+        "group": {
+            "kind": "build",
+            "isDefault": true
+        },
+        "options": {
+            "cwd": "${workspaceFolder}/build"
+        },
+        "problemMatcher": [
+            "$gcc"
+        ]
+    },
+
+3. Use CMakeBuild and then run main.cpp.
 
 
 ## Usage
