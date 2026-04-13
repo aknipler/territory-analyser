@@ -63,6 +63,12 @@ int main() {
     analyser.updateBuilding(13,3,"House",2,2, "add");
     analyser.updateBuilding(13,1,"House",2,2, "add");
     analyser.updateBuilding(17,10,"Blacksmith",2,2, "add");
+    analyser.updateBuilding(20,10,"House",2,2, "add");
+    analyser.updateBuilding(22,10,"House",2,2, "add");
+    analyser.updateBuilding(24,10,"House",2,2, "add");
+    analyser.updateBuilding(26,10,"House",2,2, "add");
+    analyser.updateBuilding(28,9,"House",2,2, "add");
+    analyser.updateBuilding(29,7,"House",2,2, "add");
     // p3
     analyser.updateBuilding(16,16,"Barracks",3,1, "add");
     analyser.updateBuilding(17,14,"House",3,1, "add");

@@ -85,7 +85,23 @@ void TerritoryAnalyser::updateBuilding(size_t x, size_t y, std::string building,
     this->masterTeamBoardEdges = findEdges(this->getMasterBoard("team"), "threeBox");
 
     // Set fill boards
+    auto playerFillResult = analyseFill(this->getMasterBoard("player"), this->getMasterBoardEdges("player"));
+    this->playerGaps = playerFillResult.gaps;
+    this->masterPlayerBoardFill = playerFillResult.fillBoard;
 
+    auto teamFillResult = analyseFill(this->getMasterBoard("team"), this->getMasterBoardEdges("team"));
+    this->teamGaps = teamFillResult.gaps;
+    this->masterTeamBoardFill = teamFillResult.fillBoard;
+
+    // print the fill boards for testing
+    std::cout << "Player Fill Board:" << std::endl;
+    for (size_t i = 0; i < playerFillResult.fills.size(); ++i) {
+        std::cout << "Fill " << i+1 << " (Dominant Player: " << playerFillResult.fills[i].getDominantPlayer() << "):" << std::endl;
+        for (const auto& cell : playerFillResult.fills[i].getCells()) {
+            std::cout << "(" << cell.first << ", " << cell.second << ") ";
+        }
+        std::cout << std::endl;
+    }
 
 
 }
@@ -101,9 +117,9 @@ std::tuple <std::size_t,std::size_t,std::size_t,std::size_t> TerritoryAnalyser::
 
     // Determine the bounding box to avoid checking the entire grid
     size_t minRow = std::max(0, static_cast<int>(centerX - r)),
-           maxRow = std::min(static_cast<int>(size - 1), static_cast<int>(centerX + r + 1)),
+           maxRow = std::min(static_cast<int>(size), static_cast<int>(centerX + r + 1)),
            minCol = std::max(0, static_cast<int>(centerY - r)),
-           maxCol = std::min(static_cast<int>(size - 1), static_cast<int>(centerY + r + 1));
+           maxCol = std::min(static_cast<int>(size), static_cast<int>(centerY + r + 1));
 
     // if player is Gaia
     if (player == 0) {
@@ -176,30 +192,30 @@ std::vector<std::vector<double>> TerritoryAnalyser::getMasterBoard(std::string t
     } else if (type == "team") {
         return masterTeamBoard;
     } else {
-        std::cerr << "Error: Invalid board type specified. Returning player board by default." << std::endl;
+        std::cerr << "Error: Invalid board type specified (" << type << "). Returning player board by default." << std::endl;
         return masterPlayerBoard;
     }
 }
 
 std::vector<std::vector<size_t>> TerritoryAnalyser::getMasterBoardEdges(std::string type) const {
-    if (type == "player edges") {
+    if (type == "player") {
         return masterPlayerBoardEdges;
-    } else if (type == "team edges") {
+    } else if (type == "team") {
         return masterTeamBoardEdges;
     } else {
-        std::cerr << "Error: Invalid board type specified. Returning player edges board by default." << std::endl;
+        std::cerr << "Error: Invalid board type specified (" << type << "). Returning player edges board by default." << std::endl;
         return masterPlayerBoardEdges;
     }
 }
 
 
 std::vector<std::vector<size_t>> TerritoryAnalyser::getMasterBoardFill(std::string type) const {
-    if (type == "player fill") {
+    if (type == "player") {
         return masterPlayerBoardFill;
-    } else if (type == "team fill") {
+    } else if (type == "team") {
         return masterTeamBoardFill;
     } else {
-        std::cerr << "Error: Invalid board type specified. Returning player fill board by default." << std::endl;
+        std::cerr << "Error: Invalid board type specified (" << type << "). Returning player fill board by default." << std::endl;
         return masterPlayerBoardFill;
     }
 }

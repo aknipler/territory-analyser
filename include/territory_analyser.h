@@ -2,6 +2,7 @@
 
 #include "grid.h"
 #include "aux.h"
+#include "fill.h"
 #include <vector>
 #include <map>
 #include <unordered_map>
@@ -9,7 +10,6 @@
 #include <string>
 #include <list>
 #include <opencv2/opencv.hpp>
-#include <bit>
 #include <iostream>
 #include <array>
 
@@ -27,6 +27,8 @@ class TerritoryAnalyser {
         std::vector<std::vector<double>> masterTeamBoard;
         std::vector<std::vector<size_t>> masterTeamBoardEdges;
         std::vector<std::vector<size_t>> masterTeamBoardFill;
+        std::vector<std::vector<Position>> playerGaps;
+        std::vector<std::vector<Position>> teamGaps;
         int numPlayers;
         int numTeams;
 
