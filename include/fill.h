@@ -1,5 +1,8 @@
 #pragma once
 
+// testing
+#include "grid.h"
+
 #include <vector>
 #include <set>
 #include <unordered_map>
@@ -13,16 +16,20 @@ private:
     std::vector<Position> cells_;
     std::vector<std::vector<Position>> gapGroups_;
     std::set<Position> dilationCells_;
-    std::unordered_map<size_t, size_t> playerCount_;
+    std::unordered_map<size_t, size_t> playerCellCount_;
+    std::unordered_map<size_t, double> playerWeightCount_;
 
 public:
     Fill() = default;
 
     void addCell(size_t row, size_t col);
+    void registerCell(size_t row, size_t col, double cellValue);
     void addGapGroup(const std::vector<Position>& group);
     void addDilationCell(size_t row, size_t col);
-    void addPlayerCell(size_t playerID);
+    void countCellAttributes(size_t playerID, double weight);
     void merge(const Fill& other);
+    void removeInternalGapGroups(const std::vector<std::vector<int>>& cellsToFill,
+                                 const std::set<int>& mergedFillIndices);
 
     size_t getDominantPlayer() const;
     const std::vector<Position>& getCells() const;
@@ -39,7 +46,8 @@ struct FillResult {
 };
 
 FillResult analyseFill(
-    const std::vector<std::vector<double>>& board_weights,
-    const std::vector<std::vector<size_t>>& board_edges
+    const std::vector<std::vector<double>>& plLocalTerritories,
+    const std::vector<std::vector<bool>>& obstructionsBoard,
+    size_t numPlayers
 );
 

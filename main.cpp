@@ -12,7 +12,7 @@ int main() {
 
     std::map<int, int> teamAssignments = {{1, 1}, {2, 2}, {3, 1}, {4, 2}}; // player 1 and 3 are in team 1, player 2 is in team 2
     std::vector<std::vector<double>> complete_board(size, std::vector<double>(size, 0));
-    TerritoryAnalyser analyser(size, 4, 2, teamAssignments); 
+    TerritoryAnalyser analyser(size, 4, 2, teamAssignments, threshold); 
 
     // place some 'buildings'
     // gaia
@@ -52,33 +52,36 @@ int main() {
 
 
     // p1
-    analyser.updateBuilding(6,11,"Barracks",1,1, "add");
-    analyser.updateBuilding(5,10,"House",1,1, "add");
-    analyser.updateBuilding(3,8,"House",1,1, "add");
-    analyser.updateBuilding(1,6,"House",1,1, "add");
-    analyser.updateBuilding(9,10,"Blacksmith",1,1, "add");
+    // analyser.updateBuilding(6,11,"Barracks",1,1, "add");
+    // analyser.updateBuilding(5,10,"House",1,1, "add");
+    // analyser.updateBuilding(3,8,"House",1,1, "add");
+    // analyser.updateBuilding(1,6,"House",1,1, "add");
+    // analyser.updateBuilding(9,10,"Blacksmith",1,1, "add");
+    // analyser.updateBuilding(11,11,"Barracks",1,1, "add");
     // p2
     analyser.updateBuilding(15,7,"Barracks",2,2, "add");
-    analyser.updateBuilding(14,5,"House",2,2, "add");
     analyser.updateBuilding(13,3,"House",2,2, "add");
     analyser.updateBuilding(13,1,"House",2,2, "add");
+    analyser.updateBuilding(11,0,"House",2,2, "add");
     analyser.updateBuilding(17,10,"Blacksmith",2,2, "add");
     analyser.updateBuilding(20,10,"House",2,2, "add");
     analyser.updateBuilding(22,10,"House",2,2, "add");
     analyser.updateBuilding(24,10,"House",2,2, "add");
     analyser.updateBuilding(26,10,"House",2,2, "add");
     analyser.updateBuilding(28,9,"House",2,2, "add");
-    analyser.updateBuilding(29,7,"House",2,2, "add");
+
+    analyser.updateBuilding(25,0,"House",2,2, "add");
     // p3
-    analyser.updateBuilding(16,16,"Barracks",3,1, "add");
-    analyser.updateBuilding(17,14,"House",3,1, "add");
-    analyser.updateBuilding(17,17,"House",3,1, "add");
-    analyser.updateBuilding(16,18,"House",3,1, "add");
-    analyser.updateBuilding(18,13,"Blacksmith",3,1, "add");
+    // analyser.updateBuilding(16,16,"Barracks",3,1, "add");
+    // analyser.updateBuilding(17,14,"House",3,1, "add");
+    // analyser.updateBuilding(17,17,"House",3,1, "add");
+    // analyser.updateBuilding(16,18,"House",3,1, "add");
+    // analyser.updateBuilding(18,13,"Blacksmith",3,1, "add");
 
     // Print Boards for testing
     if (testing == true) {
         analyser.printPlayerBoards();
+        printBoard(analyser.getMasterBoardFill("player"));
     }
 
     // Final display using OpenCV example

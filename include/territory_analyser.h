@@ -13,6 +13,13 @@
 #include <iostream>
 #include <array>
 
+struct BuildingInfo {
+    size_t influenceRadius;
+    size_t influenceWeight;
+    size_t influenceSoftExpansion;
+    size_t width;
+    size_t height;
+};
 
 class TerritoryAnalyser {
     private:
@@ -29,18 +36,20 @@ class TerritoryAnalyser {
         std::vector<std::vector<size_t>> masterTeamBoardFill;
         std::vector<std::vector<Position>> playerGaps;
         std::vector<std::vector<Position>> teamGaps;
+        std::vector<std::vector<bool>> obstructionsBoard;
         int numPlayers;
         int numTeams;
+        size_t threshold;
 
-        std::unordered_map <std::string, std::tuple <std::size_t,std::size_t>> building_dict;
+        std::unordered_map<std::string, BuildingInfo> building_dict;
         
     public:
         // Constructor to initialize the dynamic 2D array
-        TerritoryAnalyser(int givenSize, int numPlayers, int numTeams, std::map<int, int> teamAssignments);
+        TerritoryAnalyser(int givenSize, int numPlayers, int numTeams, std::map<int, int> teamAssignments, size_t threshold);
                 
         void updateBuilding(size_t x, size_t y, std::string building, int player, int team, std::string mod);
 
-        std::tuple <std::size_t,std::size_t,std::size_t,std::size_t> updateTerritory(size_t centerX, size_t centerY, size_t r, size_t player, size_t weighting=5, size_t soft_edge=4);
+        std::tuple <std::size_t,std::size_t,std::size_t,std::size_t> updateTerritory(size_t centerX, size_t centerY, size_t r, size_t player, size_t weighting=5, size_t soft_edge=4, size_t bw=1, size_t bh=1);
                 
         void mapMergedTerritories();
         

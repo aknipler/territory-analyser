@@ -8,12 +8,21 @@
 
 sudo apt update && sudo apt upgrade gcc g++
 
+Check the version with
+
+gcc -v
+
+If the version is still incorrect, it may be due to symlink issues from multiple gcc versions on the system.
+
 If using VS Code, will need to update C/C++ properties JSON file. Open Command Palette and search for C/C++: Edit Configurations (JSON). Add 
     "/usr/local/include/opencv4",
 
+You may need to go into Preferences > Settings, Search "cppstandard" and set to c++17.
 Also in .vscode/tasks.json add the following lines to the cppbuild args section:
 
+    "-std=c++17",
     "${workspaceFolder}/*.cpp",
+    // -o
     "-I/usr/local/include/opencv4", // Include path
     "-L/usr/local/lib", // Library path
     "-lopencv_imgcodecs", // Example library flags
@@ -40,7 +49,7 @@ It may also be helpful to add this section above the curly braces of the cpp bui
         ]
     },
 
-3. Use CMakeBuild and then run main.cpp.
+3. Use CMakeBuild and run.
 
 
 ## Usage
@@ -64,3 +73,8 @@ The color pass takes all the information in the system (neutral objects, edges o
 4. Fill is last
 
 This method deals simply with an enemy's object being shown when inside of a filled shape.
+
+
+### Building buildings_dict
+
+Note that soft_edge linearly decreases from the THRESHOLD to 0. 
