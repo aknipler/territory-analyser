@@ -23,25 +23,20 @@ struct BuildingInfo {
 
 class TerritoryAnalyser {
     private:
-        std::map<int, Grid> playerGrids; // map to hold the grids of all players
-        std::map<int, Grid> teamGrids; // map to hold the grids of all teams
+        std::map<int, Grid> playerGrids, teamGrids; // map to hold the grids of all teams
         std::map<int, int> teamAssignments; // map to hold the team assignments of each player
-        size_t size;
+        size_t size, threshold;
         std::vector<std::vector<size_t>> gaia_board; 
-        std::vector<std::vector<double>> masterPlayerBoard;
-        std::vector<std::vector<size_t>> masterPlayerBoardEdges;
-        std::vector<std::vector<size_t>> masterPlayerBoardFill;
-        std::vector<std::vector<double>> masterTeamBoard;
-        std::vector<std::vector<size_t>> masterTeamBoardEdges;
-        std::vector<std::vector<size_t>> masterTeamBoardFill;
-        std::vector<std::vector<Position>> playerGaps;
-        std::vector<std::vector<Position>> teamGaps;
-        std::vector<std::vector<bool>> obstructionsBoard;
-        int numPlayers;
-        int numTeams;
-        size_t threshold;
-
+        std::vector<std::vector<size_t>> masterPlayerBoardEdges, masterPlayerBoardFill, masterTeamBoardEdges, masterTeamBoardFill;
+        std::vector<std::vector<double>> masterPlayerBoard, masterTeamBoard;
+        cv::Mat finalPlayerTerritoryMap, finalTeamTerritoryMap; 
+        std::vector<std::vector<Position>> playerGaps, teamGaps;
+        std::map<int, std::vector<std::vector<bool>>> playerObstructionBoards, teamObstructionBoards;
+        int numPlayers, numTeams;
         std::unordered_map<std::string, BuildingInfo> building_dict;
+
+        std::vector<std::vector<bool>> getCombinedObstructionsBoard(const std::map<int, std::vector<std::vector<bool>>>& obstructionBoards) const;
+
         
     public:
         // Constructor to initialize the dynamic 2D array
@@ -49,16 +44,21 @@ class TerritoryAnalyser {
                 
         void updateBuilding(size_t x, size_t y, std::string building, int player, int team, std::string mod);
 
+        void updateObstruction(size_t x, size_t y, size_t bw, size_t bh, int player, int team, std::string mod);
         std::tuple <std::size_t,std::size_t,std::size_t,std::size_t> updateTerritory(size_t centerX, size_t centerY, size_t r, size_t player, size_t weighting=5, size_t soft_edge=4, size_t bw=1, size_t bh=1);
                 
         void mapMergedTerritories();
         
         void printPlayerBoards();
 
-        std::tuple<cv::Mat, cv::Mat> colour_pass();
+        void colour_pass();
 
         std::vector<std::vector<double>> getMasterBoard(std::string type = "player") const;
         std::vector<std::vector<size_t>> getMasterBoardEdges(std::string type = "player") const;
         std::vector<std::vector<size_t>> getMasterBoardFill(std::string type = "player") const;
+        cv::Mat getFinalTerritoryMap(std::string type = "player") const;
+
+        std::vector<std::vector<double>> addPlTerrToMaster(std::vector<std::vector<double>> masterBoard,std::vector<std::vector<bool>> playerBoard, int mult_factor);
+
 
 };

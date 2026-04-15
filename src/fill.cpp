@@ -1,4 +1,5 @@
 #include "fill.h"
+#include "header.h"
 
 #include <queue>
 #include <stack>
@@ -6,9 +7,7 @@
 #include <numeric>
 #include <unordered_map>
 
-#define TESTING true
 
-constexpr int CLOSED_SHAPE_GAPS_THRESHOLD = 2; // global threshold for max gap groups in a Fill to be considered valid
 
 // ---------- Fill methods ----------
 
@@ -39,12 +38,19 @@ void Fill::countCellAttributes(size_t playerID, double weight) {
     playerWeightCount_[playerID] += weight;
 }
 
+void Fill::recordAdjacentObstruction(size_t playerID) {
+    playerObstructionCount_[playerID]++;
+}
+
 void Fill::merge(const Fill& other) {
     cells_.insert(cells_.end(), other.cells_.begin(), other.cells_.end());
     gapGroups_.insert(gapGroups_.end(), other.gapGroups_.begin(), other.gapGroups_.end());
     dilationCells_.insert(other.dilationCells_.begin(), other.dilationCells_.end());
     for (const auto& kv : other.playerCellCount_) {
         playerCellCount_[kv.first] += kv.second;
+    }
+    for (const auto& kv : other.playerObstructionCount_) {
+        playerObstructionCount_[kv.first] += kv.second;
     }
 }
 
@@ -63,24 +69,34 @@ void Fill::removeInternalGapGroups(const std::vector<std::vector<int>>& cellsToF
 }
 
 size_t Fill::getDominantPlayer() const {
+    const Config& config = AppConfig::get();
 
-    size_t maxCount = 0, playerWithMax = 0, totalPlayerInvestment = 0;
-    double ownershipThreshold = 0.05, contestedOwnershipThreshold = 0.6; // e.g., 60%
+    size_t maxCount = 0, playerWithMax = 0, totalAdjustedInvestment = 0;
+    double ownershipThreshold = 0.25, contestedOwnershipThreshold = 0.6; // e.g., 60%
+
+    // If exactly one player owns all bordering obstruction cells, they get a x2 boost.
+    size_t soleObstructionOwner = 0;
+    if (!playerObstructionCount_.empty() && playerObstructionCount_.size() == 1) {
+        soleObstructionOwner = playerObstructionCount_.begin()->first;
+    }
 
     // Find player with max count
-    //  might be better to use plLocalTerritories to calculate each players investment
     for (const auto& kv : playerCellCount_) {
-        totalPlayerInvestment += kv.second;
+        totalAdjustedInvestment += kv.second;
         if (kv.second > maxCount) {
             maxCount = kv.second;
             playerWithMax = kv.first;
-            if (TESTING) std::cout << "Player " << playerWithMax << " has max count: " << maxCount << "vs:" << cells_.size() << std::endl;
+            if (config.testingMode) std::cout << "Player " << playerWithMax << " has max adjusted count: " << maxCount << " vs cells: " << cells_.size() << std::endl;
         }
     }
 
-    // Check if maxCount is enough to claim ownership
-    if (static_cast<double>(maxCount) / cells_.size() > ownershipThreshold &&
-     static_cast<double>(maxCount) / totalPlayerInvestment > contestedOwnershipThreshold) {
+    if (config.testingMode && soleObstructionOwner != 0) {
+        std::cout << "Player " << soleObstructionOwner << " solely surrounds this fill (x2 boost applied)" << std::endl;
+    }
+
+    // Check if maxCount is enough to claim ownership,  (x2 for sole obstruction owner - this means a player has walled themselves in)
+    if (static_cast<double>(maxCount) * (soleObstructionOwner != 0 && playerWithMax == soleObstructionOwner ? 2 : 1) / cells_.size() > ownershipThreshold &&
+        static_cast<double>(maxCount) / totalAdjustedInvestment > contestedOwnershipThreshold) {
         return playerWithMax;
     } else {
         return 0; // not enough to claim ownership
@@ -131,14 +147,27 @@ static constexpr int dy4[] = {0, 1, 0, -1};
 
 FillResult analyseFill(
     const std::vector<std::vector<double>>& plLocalTerritories, 
-    const std::vector<std::vector<bool>>& obstructionsBoard,
+    const std::map<int, std::vector<std::vector<bool>>>& playerObstructionBoards,
     size_t numPlayers)
 {
+    const Config& config = AppConfig::get();
+
     FillResult result;
     if (plLocalTerritories.empty()) return result;
 
     const int rows = static_cast<int>(plLocalTerritories.size());
     const int cols = static_cast<int>(plLocalTerritories[0].size());
+
+    // Merge all obstruction layers into one board for fill analysis.
+    std::vector<std::vector<bool>> obstructionsBoard(rows, std::vector<bool>(cols, false));
+    for (const auto& pair : playerObstructionBoards) {
+        const auto& board = pair.second;
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                obstructionsBoard[i][j] = obstructionsBoard[i][j] || board[i][j];
+            }
+        }
+    }
 
     // Step 0 – Initialization
     std::vector<std::vector<bool>> dilatedWalls(rows, std::vector<bool>(cols, false));
@@ -164,6 +193,27 @@ FillResult analyseFill(
         }
     }
 
+    // Step 1b – Treat map edges as implicit walls: mark border cells as dilation
+    //           walls so fills don't bleed to the boundary, unless an obstruction
+    //           is already there.
+    for (int i = 0; i < rows; i++) {
+        if (!obstructionsBoard[i][0] && dilatedWalls[i][1])         dilatedWalls[i][0]         = true;
+        if (!obstructionsBoard[i][cols - 1] && dilatedWalls[i][cols - 2])  dilatedWalls[i][cols - 1]  = true;
+    }
+    for (int j = 0; j < cols; j++) {
+        if (!obstructionsBoard[0][j] && dilatedWalls[1][j])         dilatedWalls[0][j]         = true;
+        if (!obstructionsBoard[rows - 1][j] && dilatedWalls[rows - 2][j])  dilatedWalls[rows - 1][j]  = true;
+    }
+
+    if(config.testingMode) {
+        std::cout << "Obstructions Board:" << std::endl;
+        printBoard(obstructionsBoard); // For config.testingMode
+        std::cout << std::endl;
+
+        std::cout << "Dilated Walls Board:" << std::endl;
+        printBoard(dilatedWalls); // For config.testingMode
+        std::cout << std::endl;
+    }
 
     // Step 2 – BFS flood fill to create Fill regions
     std::vector<Fill> fills;
@@ -213,6 +263,7 @@ FillResult analyseFill(
             std::set<Position> dilVisited;
             std::vector<Position> dilToConvert;
             std::vector<std::vector<Position>> gapGroupsToAdd;
+            std::set<Position> obstructionsSeen; // de-duplicate obstruction cells counted for this fill
 
             for (const auto& dilPos : fill.getDilationCells()) {
                 if (dilVisited.count(dilPos)) {
@@ -222,6 +273,7 @@ FillResult analyseFill(
                 std::vector<Position> componentDilCells;
                 std::vector<Position> gapCells;
                 std::set<Position> gapSeen;
+                std::set<Position> componentObstructionsSeen;
                 std::stack<Position> stk;
                 stk.push(dilPos);
                 dilVisited.insert(dilPos);
@@ -242,7 +294,7 @@ FillResult analyseFill(
                         Position np{static_cast<size_t>(ndr), static_cast<size_t>(ndc)};
 
                         // Continue through connected dilation cells
-                        if (dilatedWalls[ndr][ndc] && !obstructionsBoard[ndr][ndc]
+                        if (dilatedWalls[np.first][np.second] && !obstructionsBoard[np.first][np.second]
                             && !dilVisited.count(np)) {
                             dilVisited.insert(np);
                             stk.push(np);
@@ -255,30 +307,134 @@ FillResult analyseFill(
                             gapCells.push_back(np);
                         }
                     }
+
+                    // Collect bordering obstruction cells for this component only.
+                    // Ownership is committed later only if this is not a dead-end branch.
+                    for (int d = 0; d < 4; d++) {
+                        int nor = dr + dx4[d];
+                        int noc = dc + dy4[d];
+                        if (nor < 0 || nor >= rows || noc < 0 || noc >= cols) continue;
+                        if (!obstructionsBoard[nor][noc]) continue;
+                        Position obsPos{static_cast<size_t>(nor), static_cast<size_t>(noc)};
+                        componentObstructionsSeen.insert(obsPos);
+                    }
                 }
 
                 if (gapCells.empty()) {
+
                     // Dead-end branch: convert all dilation cells to fill cells
                     dilToConvert.insert(dilToConvert.end(),
                         componentDilCells.begin(), componentDilCells.end());
                 } else {
+                    // Only non-dead-end branches contribute to obstruction ownership.
+                    for (const auto& obsPos : componentObstructionsSeen) {
+                        if (obstructionsSeen.count(obsPos)) {
+                            continue;
+                        }
+                        obstructionsSeen.insert(obsPos);
+                        for (const auto& [playerID, board] : playerObstructionBoards) {
+                            if (board[obsPos.first][obsPos.second]) {
+                                fill.recordAdjacentObstruction(static_cast<size_t>(playerID));
+                            }
+                        }
+                    }
+
+                    if(config.testingMode) {
+                        
+                        // create gap cells board for config.testingMode
+                        std::vector<std::vector<int>> gapCellsBoard(rows, std::vector<int>(cols, 0));
+                        std::cout << "Gap detected for fill " << fillIdx << " with " << gapCells.size() << " gap cells." << std::endl;
+                        std::cout << "Gap cells: " << std::endl;
+                        for (const auto& gc : gapCells) {
+                            gapCellsBoard[gc.first][gc.second] = 1;
+                        }
+                        printBoard(gapCellsBoard);
+                        std::cout << std::endl;
+                    }
                     // Gap found: convert dilation cells that are adjacent to fill cells
                     std::set<Position> gapSet(gapCells.begin(), gapCells.end());
+                    std::set<Position> toConvert;
                     for (const auto& dCell : componentDilCells) {
                         bool adjacentToFill = false;
                         for (int d = 0; d < 4; d++) {
                             int ndr = static_cast<int>(dCell.first) + dx4[d];
                             int ndc = static_cast<int>(dCell.second) + dy4[d];
-                            if (ndr < 0 || ndr >= rows || ndc < 0 || ndc >= cols) continue;
-                            std::cout << "Checking gap adjacency for dilation cell (" << dCell.first << "," << dCell.second << ") against gap cell (" << ndr << "," << ndc << ") with fillIdx " << cellsToFill[ndr][ndc] << std::endl; // For testing
-                            printBoard(cellsToFill); // For testing
-                            if (cellsToFill[ndr][ndc] == fillIdx)
+                            if (ndr < 0 || ndr >= rows || ndc < 0 || ndc >= cols) {
+                                continue;
+                            }
+                            if (cellsToFill[ndr][ndc] == fillIdx) {
                                 adjacentToFill = true;
+                                break;
+                            }
                         }
                         if (adjacentToFill) {
-                            dilToConvert.push_back(dCell);
+                            toConvert.insert(dCell);
                         }
                     }
+
+
+                    // Build remaining dilation cells in this component (not already converting)
+                    std::set<Position> remaining;
+                    for (const auto& dCell : componentDilCells) {
+                        if (!toConvert.count(dCell)) {
+                            remaining.insert(dCell);
+                        }
+                    }
+
+                    // Phase 2: among remaining cells, find those connected to a gap
+                    // via 4-neighbor dilation connectivity.
+                    std::set<Position> gapConnected;
+                    std::stack<Position> s;
+
+                    // Seed: remaining dilation cells directly adjacent to a gap cell
+                    for (const auto& dCell : remaining) {
+                        bool touchesGap = false;
+                        for (int d = 0; d < 4; d++) {
+                            int ndr = static_cast<int>(dCell.first) + dx4[d];
+                            int ndc = static_cast<int>(dCell.second) + dy4[d];
+                            if (ndr < 0 || ndr >= rows || ndc < 0 || ndc >= cols) {
+                                continue;
+                            }
+                            Position np{static_cast<size_t>(ndr), static_cast<size_t>(ndc)};
+                            if (gapSet.count(np)) {
+                                touchesGap = true;
+                                break;
+                            }
+                        }
+                        if (touchesGap) {
+                            gapConnected.insert(dCell);
+                            s.push(dCell);
+                        }
+                    }
+
+                    // Flood through remaining dilation cells
+                    while (!s.empty()) {
+                        Position cur = s.top();
+                        s.pop();
+
+                        for (int d = 0; d < 4; d++) {
+                            int ndr = static_cast<int>(cur.first) + dx4[d];
+                            int ndc = static_cast<int>(cur.second) + dy4[d];
+                            if (ndr < 0 || ndr >= rows || ndc < 0 || ndc >= cols) {
+                                continue;
+                            }
+
+                            Position np{static_cast<size_t>(ndr), static_cast<size_t>(ndc)};
+                            if (remaining.count(np) && !gapConnected.count(np)) {
+                                gapConnected.insert(np);
+                                s.push(np);
+                            }
+                        }
+                    }
+
+                    // Remaining dilation cells NOT connected to any gap should also convert
+                    for (const auto& dCell : remaining) {
+                        if (!gapConnected.count(dCell)) {
+                            toConvert.insert(dCell);
+                        }
+                    }
+
+                    dilToConvert.insert(dilToConvert.end(), toConvert.begin(), toConvert.end());
                     gapGroupsToAdd.push_back(std::move(gapCells));
                 }
             }
@@ -288,6 +444,7 @@ FillResult analyseFill(
                 fill.registerCell(pos.first, pos.second, plLocalTerritories[pos.first][pos.second]);
                 cellsToFill[pos.first][pos.second] = fillIdx;
                 dilatedWalls[pos.first][pos.second] = false;
+                visited[pos.first][pos.second] = true;
             }
 
             // Add gap groups
@@ -295,7 +452,22 @@ FillResult analyseFill(
                 fill.addGapGroup(gg);
             }
 
+            if(config.testingMode) {
+                std::cout << "Dilated walls after " << fillIdx << " gap detection:" << std::endl;
+                printBoard(dilatedWalls); // For config.testingMode
+                std::cout << std::endl;
+
+                std::cout << "visited cells after gap detection:" << std::endl;
+                printBoard(visited); // For config.testingMode
+                std::cout << std::endl;
+
+                std::cout << "cellsToFill (fill results) after gap detection:" << std::endl;
+                printBoard(cellsToFill); // For config.testingMode
+                std::cout << std::endl;
+            }
+            
             fills.push_back(std::move(fill));
+
         }
     }
 
@@ -350,7 +522,7 @@ FillResult analyseFill(
         std::vector<Fill> filtered;
         filtered.reserve(fills.size());
         for (auto& f : fills) {
-            if (f.numGapGroups() <= CLOSED_SHAPE_GAPS_THRESHOLD) {
+            if (f.numGapGroups() <= config.CLOSED_SHAPE_GAPS_THRESHOLD) {
                 filtered.push_back(std::move(f));
             }
         }
@@ -381,25 +553,35 @@ FillResult analyseFill(
     }
 
     
-    if (TESTING) {
+    if (config.testingMode) {
         
         std::cout << "Obstructions + Dilations Board:" << std::endl;
-        // merge the obstructions and dilations together for testing
+        // merge the obstructions and dilations together for config.testingMode
         std::vector<std::vector<int>> obsDilBoard(rows, std::vector<int>(cols, 0));
+        std::vector<std::vector<int>> obsDilFillBoard(rows, std::vector<int>(cols, 0));
         for (int i = 0; i < rows; i++) {
             for (int j = 0; j < cols; j++) {
-                obsDilBoard[i][j] = obstructionsBoard[i][j] + dilatedWalls[i][j];
+                obsDilBoard[i][j] = -5*obstructionsBoard[i][j] + -3*dilatedWalls[i][j];
+                obsDilFillBoard[i][j] = obsDilBoard[i][j] + result.fillBoard[i][j];
             }
         }
-        printBoard(obsDilBoard); // For testing
+        printBoard(obsDilBoard); // For config.testingMode
+        std::cout << std::endl;
+        
+        std::cout << "Obsdillfill Board:" << std::endl;
+        printBoard(obsDilFillBoard); // For config.testingMode
+        std::cout << std::endl;
+        
+        std::cout << "Obstructions Board:" << std::endl;
+        printBoard(obstructionsBoard); // For config.testingMode
         std::cout << std::endl;
         
         std::cout << "Fill Board:" << std::endl;
-        printBoard(result.fillBoard); // For testing
+        printBoard(result.fillBoard); // For config.testingMode
         std::cout << std::endl;
 
         std::cout << "Player Local Territories Board:" << std::endl;
-        printBoard(plLocalTerritories); // For testing
+        printBoard(plLocalTerritories); // For config.testingMode
         std::cout << std::endl;
     }
 

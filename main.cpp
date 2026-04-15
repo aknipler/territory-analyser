@@ -5,14 +5,13 @@
 int main() {
 
 
-    // Initialise variables (some for testing purposes)
-    bool testing = true;
-    size_t size = 30, threshold = 3;
-    std::string output_directory = "output/";
+    auto prog_start_time = std::chrono::high_resolution_clock::now();
+    // Initialise Config structure from json file
+    AppConfig::set(loadConfig("settings.json"));
+    const Config& config = AppConfig::get();
 
-    std::map<int, int> teamAssignments = {{1, 1}, {2, 2}, {3, 1}, {4, 2}}; // player 1 and 3 are in team 1, player 2 is in team 2
-    std::vector<std::vector<double>> complete_board(size, std::vector<double>(size, 0));
-    TerritoryAnalyser analyser(size, 4, 2, teamAssignments, threshold); 
+    // Initialise analyser
+    TerritoryAnalyser analyser(config.mapSize, config.numberOfPlayers, config.numberOfTeams, config.teamAssignments, config.territoryFromBuildingThreshold); 
 
     // place some 'buildings'
     // gaia
@@ -52,14 +51,18 @@ int main() {
 
 
     // p1
-    // analyser.updateBuilding(6,11,"Barracks",1,1, "add");
-    // analyser.updateBuilding(5,10,"House",1,1, "add");
-    // analyser.updateBuilding(3,8,"House",1,1, "add");
-    // analyser.updateBuilding(1,6,"House",1,1, "add");
-    // analyser.updateBuilding(9,10,"Blacksmith",1,1, "add");
-    // analyser.updateBuilding(11,11,"Barracks",1,1, "add");
+    analyser.updateBuilding(6,11,"Barracks",1,1, "add");
+    analyser.updateBuilding(5,10,"House",1,1, "add");
+    analyser.updateBuilding(3,8,"House",1,1, "add");
+    analyser.updateBuilding(1,6,"House",1,1, "add");
+    analyser.updateBuilding(9,10,"Blacksmith",1,1, "add");
+    analyser.updateBuilding(11,11,"Barracks",1,1, "add");
+    analyser.updateBuilding(16,12,"House",1,1, "add");
+    
+    analyser.updateBuilding(23,2,"House",1,1, "add");
     // p2
     analyser.updateBuilding(15,7,"Barracks",2,2, "add");
+    // analyser.updateBuilding(13,5,"House",2,2, "add"); // remove this for good gap testing
     analyser.updateBuilding(13,3,"House",2,2, "add");
     analyser.updateBuilding(13,1,"House",2,2, "add");
     analyser.updateBuilding(11,0,"House",2,2, "add");
@@ -70,40 +73,60 @@ int main() {
     analyser.updateBuilding(26,10,"House",2,2, "add");
     analyser.updateBuilding(28,9,"House",2,2, "add");
 
-    analyser.updateBuilding(25,0,"House",2,2, "add");
+    // time how long it takes to update the final building to test performance
+    auto start_time = std::chrono::high_resolution_clock::now();
+    analyser.updateBuilding(26,0,"House",2,2, "add");
+    auto end_time = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+    std::cout << "Time taken to update one (final => slowest) building: " << duration.count() << " ms" << std::endl;
+    
     // p3
-    // analyser.updateBuilding(16,16,"Barracks",3,1, "add");
-    // analyser.updateBuilding(17,14,"House",3,1, "add");
-    // analyser.updateBuilding(17,17,"House",3,1, "add");
-    // analyser.updateBuilding(16,18,"House",3,1, "add");
-    // analyser.updateBuilding(18,13,"Blacksmith",3,1, "add");
+    analyser.updateBuilding(16,16,"Barracks",3,1, "add");
+    analyser.updateBuilding(17,14,"House",3,1, "add");
+    analyser.updateBuilding(17,17,"House",3,1, "add");
+    analyser.updateBuilding(16,18,"House",3,1, "add");
+    analyser.updateBuilding(18,13,"Blacksmith",3,1, "add");
+    analyser.updateBuilding(20,16,"House",3,1, "add");
+    analyser.updateBuilding(20,18,"House",3,1, "add");
+    analyser.updateBuilding(20,20,"House",3,1, "add");
+    analyser.updateBuilding(19,22,"House",3,1, "add");
+    analyser.updateBuilding(19,24,"House",3,1, "add");
+    analyser.updateBuilding(19,26,"House",3,1, "add");
+    analyser.updateBuilding(21,28,"House",3,1, "add");
+
+    analyser.updateBuilding(4,20,"Barracks",3,1, "add");
+    analyser.updateBuilding(4,25,"Barracks",3,1, "add");
+    analyser.updateBuilding(9,26,"Blacksmith",3,1, "add");
+
 
     // Print Boards for testing
-    if (testing == true) {
+    if (config.testingMode == true) {
         analyser.printPlayerBoards();
         printBoard(analyser.getMasterBoardFill("player"));
     }
 
-    // Final display using OpenCV example
-    cv::Mat final_output, final_output_team;
-    std::cout << "Territory Analyser results" << std::endl;
-    std::tie(final_output, final_output_team) = analyser.colour_pass();
+    
+
+    // Total program time 
+    auto prog_end_time = std::chrono::high_resolution_clock::now();
+    auto prog_duration = std::chrono::duration_cast<std::chrono::milliseconds>(prog_end_time - prog_start_time);
+    std::cout << "Total program time: " << prog_duration.count() << " ms" << std::endl;
 
     createDirectoryIfNotExists("output");
-    if (final_output.empty()) {
+    if (analyser.getFinalTerritoryMap("player").empty()) {
         std::cerr << "Error: Could not create final output image." << std::endl;
         return 1;
     }
-    if (final_output_team.empty()) {
+    if (analyser.getFinalTerritoryMap("team").empty()) {
         std::cerr << "Error: Could not create final team output image." << std::endl;
         return 1;
     }
     
-    if (!cv::imwrite(output_directory + "Territory Analyser Results.png", final_output)) {
+    if (!cv::imwrite(config.outputDirectory + "Territory Analyser Results.png", analyser.getFinalTerritoryMap("player"))) {
         std::cerr << "Error: Could not write final output image." << std::endl;
         return 1;
     }
-    if (!cv::imwrite(output_directory + "Territory Analyser Results Team.png", final_output_team)) {
+    if (!cv::imwrite(config.outputDirectory + "Territory Analyser Results Team.png", analyser.getFinalTerritoryMap("team"))) {
         std::cerr << "Error: Could not write final team output image." << std::endl;
         return 1;
     }

@@ -4,6 +4,7 @@
 #include "grid.h"
 
 #include <vector>
+#include <map>
 #include <set>
 #include <unordered_map>
 #include <utility>
@@ -18,6 +19,7 @@ private:
     std::set<Position> dilationCells_;
     std::unordered_map<size_t, size_t> playerCellCount_;
     std::unordered_map<size_t, double> playerWeightCount_;
+    std::unordered_map<size_t, size_t> playerObstructionCount_; // how many bordering obstruction cells each player owns
 
 public:
     Fill() = default;
@@ -27,6 +29,7 @@ public:
     void addGapGroup(const std::vector<Position>& group);
     void addDilationCell(size_t row, size_t col);
     void countCellAttributes(size_t playerID, double weight);
+    void recordAdjacentObstruction(size_t playerID);
     void merge(const Fill& other);
     void removeInternalGapGroups(const std::vector<std::vector<int>>& cellsToFill,
                                  const std::set<int>& mergedFillIndices);
@@ -47,7 +50,7 @@ struct FillResult {
 
 FillResult analyseFill(
     const std::vector<std::vector<double>>& plLocalTerritories,
-    const std::vector<std::vector<bool>>& obstructionsBoard,
+    const std::map<int, std::vector<std::vector<bool>>>& playerObstructionBoards,
     size_t numPlayers
 );
 
