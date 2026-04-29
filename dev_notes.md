@@ -1,18 +1,18 @@
 # Dev Notes
 
 ## To - Do
-- The current wall ownership theory sucks -> lots of potential issues (if an enemy house is on the inside of the walls and is touching the wall, then its obstruction will be included and the boost will fail). Should do this more rigorously: After your dilations and removing of dilations, walk the players obstructions + gaps that neighbour the current fill. If it is unbroken (with itself or with two of the map edges) then it’s gee!
-- Need to implement box checks now, for regions of interest.
-- Need to improve hasCycle in conjunction with box checks. hasCycle could be proven in a bunch of ways the don't actually encircle the region of interest, it could cycle a simple circle of 4 cells (like a box)
-* Some details:
-Issue A: we only add player obstruction cells adjacent to the fill. If an opposing players obstruction is on the inside of the shape, touching the edge, then there will be a gap and the enclosed shape will fail to be recognised.
-Solution A: For these obstructions that are owned by another player or gaia, search their 4 adjacent neighbours recursively. If it finds a current-player cell, add it to the closure map, then kill that branch. Also, when you enter a call, if that cell neighbours a non-obstruction cell then don't explore it's neighbours. 
-Issue B: If a player has a long thick wall that covers half the map and is connected to this subsection of the map, it would traverse the long wall even if half the fill was surrounded by an opposing player.
-Solution B: Make sure you get the whole connecting wall, in case it touches the edge of the map in 3 places or 4 places. Then, after you've got all the information, do a subsection analysis by coonnecting the map-edge-meeting points through the outside of the map. If there is another fill inside this shape / subsection, then it's an incorrect border for the fill.
+- The current wall ownership theory needs work -> lots of potential issues (if an enemy house is on the inside of the walls and is touching the wall, then its obstruction will be included and the boost will fail). Should do this more rigorously: After removing of dilations, walk the players obstructions + gaps that neighbour the current fill. If it is unbroken (cyclic with itself or touching two distinct map edges) then it's good.  
 
-- Implement player defeated no longer impacts territory except for castles towers and walls  
-- Solve water (more broadly, maybe apply to non-buildable or non-walkable terrain)? Closed shape on land, docks give a small area around them? Castles, towers and TCs still give territory on water?
+~ Need to improve hasCycle in conjunction with box checks. hasCycle could be proven in a bunch of ways the don't actually encircle the region of interest, it could cycle a simple circle of 4 cells (like a box).   
+~ We currently do this by cell, I wonder if it would be better to do it by building object. (faster? More rigorous?)
+* Some more details:  
+**Issue A:** we only add player obstruction cells adjacent to the fill. If an opposing players obstruction is on the inside of the shape, touching the edge, then there will be a gap and the enclosed shape will fail to be recognised.  
+**Solution A:** For these obstructions that are owned by another player or gaia, search their 4 adjacent neighbours recursively. If it finds a current-player cell, add it to the closure map, then kill that branch. Also, when you enter a call, if that cell neighbours a non-obstruction cell then don't explore it's neighbours.   
+**Issue B:** If a player has a long thick wall that covers half the map and is connected to this subsection of the map, it would traverse the long wall even if half the fill was surrounded by an opposing player.  
+**Solution B:** Make sure you get the whole connecting wall, in case it touches the edge of the map in 3 places or 4 places. Then, after you've got all the information, do a subsection analysis by coonnecting the map-edge-meeting points through the outside of the map. If there is another fill inside this shape / subsection, then it's an incorrect border for the fill.  
+
 - Optimise
+- Make it so contested territory method flash is able to be combined with the other methods.
 
 ## Thoughts 14/04/2026
 
@@ -29,8 +29,8 @@ a small enemy base inside the fill, it won't immediately disqualify the whole fi
 
 Worth optimising?
 
-### Three-box:
-- checks one box above and one box to the side. If all three boxes are not the same value, then it's an edge.
+### Four-box:
+- checks one box above, one box to the side and one box diagonally. If all four boxes are not the same value, then it's an edge.
 
 ## Territory representation
 
@@ -50,9 +50,9 @@ Logistics: Track changes of a players bool board. Add those values to the global
 (8 player worst case) Have to run finalise shading function anyway. The main logistic change would be 'tracking changes' but that's more of a memory performance change. I think this is best.
 
 #### Two team solutions
-What solves this behaviour? Could do
-a) represent it with both colours, with neutral lines to show its contested
-b) give each team half the territory, whichever half is closest to them. (could be useful if you have 2 teams of 4 but put it in individual player viewability, so that where teammates are, the colours will just snug with each other.)
+What solves this behaviour? Could do  
+a) represent it with both colours, with neutral lines to show its contested  
+b) give each team half the territory, whichever half is closest to them. (could be useful if you have 2 teams of 4 but put it in individual player viewability, so that where teammates are, the colours will just snug with each other.)  
 
 Maybe both behaviours will be necessary
 
