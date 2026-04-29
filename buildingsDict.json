@@ -1,0 +1,13 @@
+{
+    "rangedBuildings": ["Tower", "Castle", "Town Center", "Krepost", "Settlement", "Fortified Church", "Donjon", "Bombard Tower", "Keep", "Guard Tower", "Watch Tower", "Fire Tower"],
+    "_comment": "radius, weight, soft edge, soft edge starting value div factor (threshold / div factor), building width, building height",
+    "buildingsDict": [
+        ["Palisade Wall",   [0, 3, 1, 4.0, 2, 2]],
+        ["House",           [0, 3, 2, 1.5, 2, 2]],
+        ["Barracks",        [2, 3, 3, 1.0, 3, 3]],
+        ["Blacksmith",      [1, 3, 1, 1.0, 3, 3]],
+        ["Tree",            [0, 1, 0, 0.0, 1, 1]],
+        ["Gold Mine",       [0, 1, 0, 0.0, 1, 1]],
+        ["Cliff",           [0, 1, 0, 0.0, 1, 1]]
+    ]
+}

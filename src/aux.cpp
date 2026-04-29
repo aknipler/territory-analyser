@@ -66,3 +66,4 @@ Config loadConfig(const std::string& givenConfigPath) {
     
     return config;
 }
+

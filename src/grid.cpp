@@ -1,17 +1,17 @@
 #include "grid.h"
 
 
-void Grid::setValue(size_t i, size_t j, int value) {
+void Grid::setValue(size_t i, size_t j, double value) {
     if (i < size && j < size) {
         dataTruth[i][j] = value;
     }
 }
 
-int Grid::getValue(size_t i, size_t j) const {
+double Grid::getValue(size_t i, size_t j) const {
     if (i < size && j < size) {
         return dataTruth[i][j];
     }
-    return -1;  
+    return -1.0;  
 }
 
 std::vector<std::vector<double>> Grid::getDataTruth() const {

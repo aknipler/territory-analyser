@@ -14,6 +14,7 @@ using json = nlohmann::json;
 #include <array>
 #include <map>
 
+#include <cmath>
 #include <string>
 
 struct Config {
@@ -21,8 +22,11 @@ struct Config {
     // App Settings
     std::string appName;
     std::string version;
-    bool testingMode;
     std::string outputDirectory;
+
+    // Testing Settings
+    bool testingMode;
+    bool forceRadialInfluenceForRangedBuildings;
 
     // Match Settings
     int numberOfPlayers;
@@ -31,8 +35,17 @@ struct Config {
     std::map<int, int> teamAssignments;
 
     // Analytics Settings
-    size_t territoryFromBuildingThreshold;
+    std::string contestedTerritoryMethod;
+    std::vector<std::string> contestedTerritoryMethodOptions;
+    std::array<int, 4> contestedTerritoryColour;
+    size_t rawTerritoryOwnershipThreshold;
     int CLOSED_SHAPE_GAPS_THRESHOLD;
+    double ownershipThreshold;
+    double contestedOwnershipThreshold;
+    double isWalledMultiplier;
+    std::vector<std::string> nonWalkableTerrainBuildings;
+
+    std::vector<std::vector<bool>> nonWalkableTerrainExample;
 
     // Visual Settings
     std::map<int, std::array<int, 4>> playerColours;
@@ -41,4 +54,4 @@ struct Config {
     int territoryOpacity;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Config, appName, version, testingMode, outputDirectory, numberOfPlayers, numberOfTeams, mapSize, teamAssignments, playerColours, teamColours, territoryFromBuildingThreshold, CLOSED_SHAPE_GAPS_THRESHOLD, edgeOpacity, territoryOpacity)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Config, appName, version, testingMode, forceRadialInfluenceForRangedBuildings, outputDirectory, numberOfPlayers, numberOfTeams, mapSize, teamAssignments, playerColours, teamColours, contestedTerritoryMethod, contestedTerritoryMethodOptions, contestedTerritoryColour, rawTerritoryOwnershipThreshold, CLOSED_SHAPE_GAPS_THRESHOLD, ownershipThreshold, contestedOwnershipThreshold, isWalledMultiplier, nonWalkableTerrainBuildings, edgeOpacity, territoryOpacity)

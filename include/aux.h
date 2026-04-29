@@ -4,8 +4,11 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <map>
+#include <unordered_map>
 
 struct Config;
+struct BuildingInfo;
 
 namespace AppConfig {
     const Config& get();

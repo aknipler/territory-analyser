@@ -12,6 +12,7 @@
 #include <tuple>
 #include <string>
 #include <any>
+#include <type_traits>
 
 class Grid {
     private:
@@ -33,9 +34,9 @@ class Grid {
         }
 
         
-    void setValue(size_t i, size_t j, int value);
+    void setValue(size_t i, size_t j, double value);
 
-    int getValue(size_t i, size_t j) const;
+    double getValue(size_t i, size_t j) const;
     
     std::vector<std::vector<double>> getDataTruth() const;
     std::vector<std::vector<bool>> getDataBool() const;
@@ -49,8 +50,8 @@ class Grid {
 
 // helper functions
 template <typename T>
-std::vector<std::vector<size_t>> findEdges(std::vector<std::vector<T>> board,
-                                           const std::vector<std::vector<size_t>>& fillBoard,
+std::vector<std::vector<size_t>> findEdges(const std::vector<std::vector<T>>& board,
+                                           const std::vector<std::vector<size_t>>* fillBoard=nullptr,
                                            std::string mode="fourBox") {
 
     std::vector<std::vector<size_t>> detEdges(board.size(), std::vector<size_t>(board.size(), 0));
@@ -69,8 +70,8 @@ std::vector<std::vector<size_t>> findEdges(std::vector<std::vector<T>> board,
                 size_t boardVal = static_cast<size_t>(board[i][j]);
                 if (boardVal != 0) {
                     effective[i][j] = boardVal;
-                } else if (!fillBoard.empty() && i < fillBoard.size() && j < fillBoard[i].size()) {
-                    effective[i][j] = fillBoard[i][j];
+                } else if (fillBoard && i < fillBoard->size() && j < (*fillBoard)[i].size()) {
+                    effective[i][j] = (*fillBoard)[i][j];
                 }
             }
         }
@@ -114,20 +115,65 @@ std::vector<std::vector<size_t>> findEdges(std::vector<std::vector<T>> board,
     }
     return detEdges;
 }
+template <typename T>
+std::vector<std::vector<size_t>> findEdges(
+    const std::vector<std::vector<T>>& board,
+    const std::vector<std::vector<size_t>>& fillBoard,   // binds to the temporary
+    std::string mode = "fourBox") {
+    return findEdges(board, &fillBoard, mode);            // passes pointer to main impl
+}
 
 template <typename T>
-std::vector<std::vector<size_t>> findEdges(std::vector<std::vector<T>> board, std::string mode="fourBox") {
-    return findEdges(board, std::vector<std::vector<size_t>>{}, mode);
+std::vector<std::vector<size_t>> findEdges(const std::vector<std::vector<T>>& board, std::string mode) {
+    return findEdges(board, nullptr, mode);
 }
 
 
 template <typename T>
-void printBoard(std::vector <std::vector<T>> board, size_t precision=1) {
-    for (size_t i = 0; i < board.size(); ++i) {
-        for (size_t j = 0; j < board.size(); ++j) {
-            std::cout << std::setw(3) << std::fixed << std::setprecision(precision) << board[i][j] << " ";
+void printBoard(const std::vector<std::vector<T>>& board, size_t precision=1, bool skipNegativeOnes=false) {
+    if (board.empty()) {
+        std::cout << "(empty board)" << std::endl;
+        return;
+    }
+
+    const size_t rowCount = board.size();
+    size_t colCount = 0;
+    for (const auto& row : board) {
+        colCount = std::max(colCount, row.size());
+    }
+
+    // Print column headers using the same width pattern as row cells.
+    std::cout << std::setw(3) << " " << "   ";
+    for (size_t i = 0; i < colCount; ++i) {
+        std::cout << "-" << std::setw(2) << i << "-";
+    }
+    std::cout << std::endl;
+
+    for (size_t i = 0; i < rowCount; ++i) {
+        // Print rows with row headers
+        std::cout << std::setw(3) << std::fixed << std::setprecision(precision) << i << " | ";
+
+        // print values in the row
+        for (size_t j = 0; j < colCount; ++j) {
+            if (j >= board[i].size()) {
+                std::cout << std::setw(3) << " " << " ";
+                continue;
+            }
+
+            bool isNegativeOne = false;
+            if constexpr (std::is_arithmetic_v<T>) {
+                isNegativeOne = (board[i][j] == static_cast<T>(-1));
+            }
+
+            if (skipNegativeOnes && isNegativeOne) {
+                std::cout << std::setw(3) << " " << " ";
+            } else {
+                std::cout << std::setw(3) << std::fixed << std::setprecision(precision) << board[i][j] << " ";
+            }
         }
-        std::cout << std::endl;
+
+        // End of row
+        std::cout << std::setw(3) << std::fixed << std::setprecision(precision) << " | " << i << std::endl;
     }
 }
 

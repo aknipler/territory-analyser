@@ -1,8 +1,10 @@
 {
   "appName": "TerritoryAnalyser",
   "version": "0.8",
-  "testingMode": false,
   "outputDirectory": "output/",
+
+  "testingMode": false,
+  "forceRadialInfluenceForRangedBuildings": false,
   
   "numberOfPlayers": 4,
   "numberOfTeams": 2,
@@ -14,8 +16,15 @@
     [4, 2]
   ],
   
-  "territoryFromBuildingThreshold": 3,
+  "contestedTerritoryMethod": "staticColour",
+  "contestedTerritoryMethodOptions": ["flash","perpendicularLines", "growth", "staticColour"],
+  "contestedTerritoryColour": [150, 150, 150, 255],
+  "rawTerritoryOwnershipThreshold": 3,
   "CLOSED_SHAPE_GAPS_THRESHOLD": 2,
+  "ownershipThreshold": 0.85,
+  "contestedOwnershipThreshold": 0.6,
+  "isWalledMultiplier": 4.5,
+  "nonWalkableTerrainBuildings": ["Dock", "Harbour"],
   
   "playerColours": [
     [0, [0,   0,   0,   255]],
