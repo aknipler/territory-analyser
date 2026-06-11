@@ -40,23 +40,29 @@ void Grid::setData(std::vector<std::vector<double>> newData, std::string type) {
 
 
 
+// ---------- terrainBoolPass ----------
+
+/**
+ * @brief Converts dataTruth to dataBool within the given bounds: a cell is true when its truth
+ *        value meets or exceeds threshold.  If bounds is the zero-tuple, the entire board is updated.
+ */
 void Grid::terrainBoolPass( size_t threshold, std::tuple<size_t, size_t, size_t, size_t> bounds) {
     // takes a board and transforms it to boolean based on a threshold
     // assumes that board is square
 
     // check if bounds is the default value, if so set it to cover the whole board, otherwise use the provided bounds
-    size_t minRow, maxRow, minCol, maxCol;
+    size_t minX, maxX, minY, maxY;
     if (bounds == std::make_tuple(0,0,0,0)) {
-        minRow = 0;
-        maxRow = dataTruth.size();
-        minCol = 0;
-        maxCol = dataTruth.size();
+        minX = 0;
+        maxX = dataTruth.size();
+        minY = 0;
+        maxY = dataTruth.size();
     } else {
-        std::tie(minRow, maxRow, minCol, maxCol) = bounds;
+        std::tie(minX, maxX, minY, maxY) = bounds;
     }
 
-    for (size_t i = minRow; i < maxRow; ++i) {
-        for (size_t j = minCol; j < maxCol; ++j) {
+    for (size_t i = minX; i < maxX; ++i) {
+        for (size_t j = minY; j < maxY; ++j) {
             dataBool[i][j] = (dataTruth[i][j] < threshold) ? 0 : 1;
         }
     }

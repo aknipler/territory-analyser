@@ -73,7 +73,7 @@ If the version is still incorrect, it may be due to symlink issues from multiple
 There is a simple 4 step process:
 
 1. Initialise your system (map size, players, teams, neutral objects).
-2. Add player-controlled objects (i.e. buildings) to the grids using analyser.updateBuilding(x,y,building,player,team,type) // type = "add" or "remove"
+2. Add player-controlled objects (i.e. buildings) to the grids using analyser.updateBuilding(x,y,building,player,type) // type = "add" or "remove"
 3. When you want a visual update use updateRender() which will perform fill analysis etc. and update the output mat.
 4. Use getFinalTerritoryMap("player" or "team") to get the output mat. Display the output mat using imshow(), imwrite() or integrate into your game/spectating application.
 

@@ -1,0 +1,153 @@
+# Gaia Terrain / Resources
+analyser.updateBuilding(24, 38, "Gold Mine", 0, "add");
+analyser.updateBuilding(30, 32, "Stone Mine", 0, "add");
+analyser.updateBuilding(44, 18, "Tree", 0, "add");
+analyser.updateBuilding(48, 20, "Tree", 0, "add");
+analyser.updateBuilding(52, 24, "Tree", 0, "add");
+analyser.updateBuilding(60, 30, "Cliff", 0, "add");
+analyser.updateBuilding(64, 31, "Cliff", 0, "add");
+analyser.updateBuilding(68, 32, "Cliff", 0, "add");
+analyser.updateBuilding(90, 20, "Tree", 0, "add");
+analyser.updateBuilding(94, 22, "Tree", 0, "add");
+analyser.updateBuilding(100, 18, "Tree", 0, "add");
+analyser.updateBuilding(118, 28, "Gold Mine", 0, "add");
+analyser.updateBuilding(128, 34, "Stone Mine", 0, "add");
+analyser.updateBuilding(142, 40, "Tree", 0, "add");
+analyser.updateBuilding(150, 42, "Tree", 0, "add");
+analyser.updateBuilding(162, 36, "Tree", 0, "add");
+analyser.updateBuilding(176, 44, "Tree", 0, "add");
+analyser.updateBuilding(186, 52, "Gold Mine", 0, "add");
+analyser.updateBuilding(194, 58, "Stone Mine", 0, "add");
+
+
+# Blue Player (Player 1)
+analyser.updateBuilding(44, 82, "Town Center", 1, "add");
+analyser.updateBuilding(38, 88, "House", 1, "add");
+analyser.updateBuilding(40, 90, "House", 1, "add");
+analyser.updateBuilding(42, 92, "House", 1, "add");
+analyser.updateBuilding(46, 92, "House", 1, "add");
+analyser.updateBuilding(50, 88, "House", 1, "add");
+analyser.updateBuilding(54, 84, "House", 1, "add");
+analyser.updateBuilding(56, 86, "House", 1, "add");
+analyser.updateBuilding(58, 90, "House", 1, "add");
+analyser.updateBuilding(62, 94, "House", 1, "add");
+analyser.updateBuilding(52, 78, "Barracks", 1, "add");
+analyser.updateBuilding(58, 76, "Archery Range", 1, "add");
+analyser.updateBuilding(66, 84, "Blacksmith", 1, "add");
+analyser.updateBuilding(34, 96, "Mining Camp", 1, "add");
+analyser.updateBuilding(30, 100, "Lumber Camp", 1, "add");
+
+analyser.updateBuilding(28, 78, "Palisade Wall", 1, "add");
+analyser.updateBuilding(30, 78, "Palisade Wall", 1, "add");
+analyser.updateBuilding(32, 78, "Palisade Wall", 1, "add");
+analyser.updateBuilding(34, 78, "Palisade Wall", 1, "add");
+analyser.updateBuilding(36, 78, "Palisade Wall", 1, "add");
+analyser.updateBuilding(38, 78, "Palisade Wall", 1, "add");
+analyser.updateBuilding(40, 78, "Palisade Wall", 1, "add");
+analyser.updateBuilding(42, 78, "Palisade Wall", 1, "add");
+analyser.updateBuilding(44, 78, "Palisade Wall", 1, "add");
+analyser.updateBuilding(46, 78, "Palisade Wall", 1, "add");
+analyser.updateBuilding(48, 78, "Palisade Wall", 1, "add");
+
+analyser.updateBuilding(28, 80, "Palisade Wall", 1, "add");
+analyser.updateBuilding(28, 82, "Palisade Wall", 1, "add");
+analyser.updateBuilding(28, 84, "Palisade Wall", 1, "add");
+analyser.updateBuilding(28, 86, "Palisade Wall", 1, "add");
+analyser.updateBuilding(28, 88, "Palisade Wall", 1, "add");
+analyser.updateBuilding(28, 90, "Palisade Wall", 1, "add");
+analyser.updateBuilding(28, 92, "Palisade Wall", 1, "add");
+analyser.updateBuilding(28, 94, "Palisade Wall", 1, "add");
+analyser.updateBuilding(28, 96, "Palisade Wall", 1, "add");
+
+
+# Red Player (Player 2)
+analyser.updateBuilding(118, 52, "Town Center", 2, "add");
+analyser.updateBuilding(112, 44, "Castle", 2, "add");
+analyser.updateBuilding(104, 54, "Barracks", 2, "add");
+analyser.updateBuilding(108, 60, "Stable", 2, "add");
+analyser.updateBuilding(116, 62, "Archery Range", 2, "add");
+analyser.updateBuilding(124, 60, "Siege Workshop", 2, "add");
+analyser.updateBuilding(132, 56, "Blacksmith", 2, "add");
+
+analyser.updateBuilding(98, 42, "House", 2, "add");
+analyser.updateBuilding(100, 44, "House", 2, "add");
+analyser.updateBuilding(102, 46, "House", 2, "add");
+analyser.updateBuilding(104, 48, "House", 2, "add");
+analyser.updateBuilding(106, 50, "House", 2, "add");
+analyser.updateBuilding(108, 52, "House", 2, "add");
+analyser.updateBuilding(110, 54, "House", 2, "add");
+analyser.updateBuilding(112, 56, "House", 2, "add");
+analyser.updateBuilding(114, 58, "House", 2, "add");
+analyser.updateBuilding(116, 60, "House", 2, "add");
+analyser.updateBuilding(118, 62, "House", 2, "add");
+analyser.updateBuilding(120, 64, "House", 2, "add");
+analyser.updateBuilding(122, 66, "House", 2, "add");
+analyser.updateBuilding(124, 68, "House", 2, "add");
+analyser.updateBuilding(126, 70, "House", 2, "add");
+analyser.updateBuilding(128, 72, "House", 2, "add");
+analyser.updateBuilding(130, 74, "House", 2, "add");
+
+analyser.updateBuilding(136, 48, "University", 2, "add");
+analyser.updateBuilding(140, 54, "Monastery", 2, "add");
+analyser.updateBuilding(144, 60, "Market", 2, "add");
+analyser.updateBuilding(150, 66, "Mining Camp", 2, "add");
+
+
+# Green Player (Player 3)
+analyser.updateBuilding(82, 146, "Town Center", 3, "add");
+analyser.updateBuilding(74, 150, "House", 3, "add");
+analyser.updateBuilding(76, 152, "House", 3, "add");
+analyser.updateBuilding(78, 154, "House", 3, "add");
+analyser.updateBuilding(80, 156, "House", 3, "add");
+analyser.updateBuilding(84, 156, "House", 3, "add");
+analyser.updateBuilding(88, 154, "House", 3, "add");
+analyser.updateBuilding(92, 150, "House", 3, "add");
+analyser.updateBuilding(96, 148, "House", 3, "add");
+analyser.updateBuilding(100, 146, "House", 3, "add");
+analyser.updateBuilding(104, 144, "House", 3, "add");
+
+analyser.updateBuilding(70, 142, "Barracks", 3, "add");
+analyser.updateBuilding(68, 136, "Archery Range", 3, "add");
+analyser.updateBuilding(74, 134, "Stable", 3, "add");
+analyser.updateBuilding(88, 138, "Blacksmith", 3, "add");
+analyser.updateBuilding(96, 136, "Siege Workshop", 3, "add");
+analyser.updateBuilding(58, 152, "Lumber Camp", 3, "add");
+analyser.updateBuilding(62, 160, "Mining Camp", 3, "add");
+
+
+# Yellow Player (Player 4)
+analyser.updateBuilding(164, 126, "Town Center", 4, "add");
+analyser.updateBuilding(154, 132, "House", 4, "add");
+analyser.updateBuilding(156, 134, "House", 4, "add");
+analyser.updateBuilding(158, 136, "House", 4, "add");
+analyser.updateBuilding(160, 138, "House", 4, "add");
+analyser.updateBuilding(164, 138, "House", 4, "add");
+analyser.updateBuilding(168, 136, "House", 4, "add");
+analyser.updateBuilding(172, 134, "House", 4, "add");
+analyser.updateBuilding(176, 132, "House", 4, "add");
+analyser.updateBuilding(180, 130, "House", 4, "add");
+analyser.updateBuilding(184, 128, "House", 4, "add");
+
+analyser.updateBuilding(150, 120, "Barracks", 4, "add");
+analyser.updateBuilding(156, 118, "Archery Range", 4, "add");
+analyser.updateBuilding(164, 118, "Stable", 4, "add");
+analyser.updateBuilding(172, 120, "Blacksmith", 4, "add");
+analyser.updateBuilding(178, 124, "Market", 4, "add");
+analyser.updateBuilding(182, 132, "University", 4, "add");
+analyser.updateBuilding(186, 138, "Monastery", 4, "add");
+
+# Additional Gaia
+analyser.updateBuilding(20, 160, "Tree", 0, "add");
+analyser.updateBuilding(24, 164, "Tree", 0, "add");
+analyser.updateBuilding(30, 170, "Tree", 0, "add");
+analyser.updateBuilding(42, 178, "Tree", 0, "add");
+analyser.updateBuilding(58, 182, "Cliff", 0, "add");
+analyser.updateBuilding(66, 184, "Cliff", 0, "add");
+analyser.updateBuilding(78, 188, "Tree", 0, "add");
+analyser.updateBuilding(92, 192, "Tree", 0, "add");
+analyser.updateBuilding(108, 194, "Tree", 0, "add");
+analyser.updateBuilding(132, 182, "Gold Mine", 0, "add");
+analyser.updateBuilding(148, 176, "Stone Mine", 0, "add");
+analyser.updateBuilding(170, 166, "Tree", 0, "add");
+analyser.updateBuilding(182, 154, "Tree", 0, "add");
+analyser.updateBuilding(194, 142, "Tree", 0, "add");
