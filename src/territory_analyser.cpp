@@ -5,6 +5,7 @@
 // #include "grid.h"
 
 #include <cstdlib>
+#include <fstream>
 #include <limits>
 #include <queue>
 
@@ -106,16 +107,24 @@ void TerritoryAnalyser::initWalkableTerrain() {
 
     Config config = AppConfig::get();
 
-    // read in walkable terrain: create example
+    // Read walkable terrain from AAAImageWater.txt (each row is a string of '0'/'1' chars;
+    // '1' = walkable land, '0' = non-walkable water).
     std::vector<std::vector<size_t>> WalkableTerrain(size, std::vector<size_t>(size, 1));
-    for (size_t x = 0; x < size; ++x) {
-        for (size_t y = 0; y < size; ++y) {
-            if (y * y + x * x > 217 * 215 + 215 * 217) { // example water body
-                WalkableTerrain[x][y] = 0;
+
+    std::ifstream waterFile("examples/AAAImageWater.txt");
+    if (!waterFile.is_open()) {
+        std::cerr << "Warning: Could not open examples/AAAImageWater.txt. Defaulting to all-walkable terrain." << std::endl;
+    } else {
+        std::string line;
+        size_t row = 0;
+        while (row < size && std::getline(waterFile, line)) {
+            for (size_t col = 0; col < size && col < line.size(); ++col) {
+                WalkableTerrain[row][col] = (line[col] == '1') ? 1 : 0;
             }
+            ++row;
         }
     }
-    
+
     // store walkable terrain board (1 = walkable, 0 = water/non-walkable)
     WalkableTerrainBoard = WalkableTerrain;
 
@@ -379,7 +388,12 @@ void TerritoryAnalyser::updatePlayerAndTeamFills(size_t x, size_t y, const Build
         x, y, info.width, info.height, influenceExtent, isFastPath, mod,
         playerFills, playerFillAssignmentBoard, masterPlayerBoardFill, playerGaps,
         getMasterBoard("player"), masterPlayerObstructionBoard, playerObstructionBoards,
-        numPlayers, dsuGroupBounds, &WalkableTerrainBoard, &isPlayerDefeated);
+        numPlayers, dsuGroupBounds, &WalkableTerrainBoard, &isPlayerDefeated, "player");
+    if (AppConfig::get().validateIncrementalFills) {
+        validateAgainstFullRecompute(playerFillResult, "player " + mod,
+            getMasterBoard("player"), masterPlayerObstructionBoard, playerObstructionBoards,
+            numPlayers, &WalkableTerrainBoard, &isPlayerDefeated);
+    }
     playerFills               = std::move(playerFillResult.fills);
     playerGaps                = std::move(playerFillResult.gaps);
     masterPlayerBoardFill     = std::move(playerFillResult.fillBoard);
@@ -389,7 +403,12 @@ void TerritoryAnalyser::updatePlayerAndTeamFills(size_t x, size_t y, const Build
         x, y, info.width, info.height, influenceExtent, isFastPath, mod,
         teamFills, teamFillAssignmentBoard, masterTeamBoardFill, teamGaps,
         getMasterBoard("team"), masterTeamObstructionBoard, teamObstructionBoards,
-        numTeams, dsuGroupBounds, &WalkableTerrainBoard, nullptr);
+        numTeams, dsuGroupBounds, &WalkableTerrainBoard, nullptr, "team");
+    if (AppConfig::get().validateIncrementalFills) {
+        validateAgainstFullRecompute(teamFillResult, "team " + mod,
+            getMasterBoard("team"), masterTeamObstructionBoard, teamObstructionBoards,
+            numTeams, &WalkableTerrainBoard, nullptr);
+    }
     teamFills               = std::move(teamFillResult.fills);
     teamGaps                = std::move(teamFillResult.gaps);
     masterTeamBoardFill     = std::move(teamFillResult.fillBoard);
@@ -1866,10 +1885,10 @@ void TerritoryAnalyser::loadBuildingsDict(const std::string& givenDictPath) {
                 properties[3],                       // softEdgeDivFactor
                 static_cast<size_t>(properties[4]),  // width
                 static_cast<size_t>(properties[5]),  // height
-                label                                // label ("Military" or "Other")
+                label                                // label ("Combative" or "Other")
             };
-            if (label == "Military") {
-                militaryBuildings.push_back(name);
+            if (label == "Combative") {
+                combativeBuildings.push_back(name);
             }
         }
     } catch (const json::parse_error& e) {

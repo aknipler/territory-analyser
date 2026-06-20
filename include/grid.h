@@ -27,10 +27,6 @@ class Grid {
         Grid(int givenSize) 
             : size(givenSize), dataTruth(givenSize, std::vector<double>(givenSize, 0)), dataBool(givenSize, std::vector<bool>(givenSize, false)) {
 
-            // Generate buildingDict AK: -> should be a seperate file that you read into the program on a global level
-            buildingDict["House"] = std::make_tuple(2,2);
-            buildingDict["Barracks"] = std::make_tuple(4,3);
-            buildingDict["Blacksmith"] = std::make_tuple(3,2);
         }
 
         

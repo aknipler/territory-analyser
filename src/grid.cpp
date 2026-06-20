@@ -24,13 +24,13 @@ std::vector<std::vector<bool>> Grid::getDataBool() const {
 void Grid::setData(std::vector<std::vector<double>> newData, std::string type) {
     if (type == "truth") {
         for (size_t i = 0; i < newData.size(); ++i) {
-            for (size_t j = 0; j < newData.size(); ++j) {
+            for (size_t j = 0; j < newData[i].size(); ++j) {
                 dataTruth[i][j] = newData[i][j];
             }
         }
     } else if (type == "bool") {
         for (size_t i = 0; i < newData.size(); ++i) {
-            for (size_t j = 0; j < newData.size(); ++j) {
+            for (size_t j = 0; j < newData[i].size(); ++j) {
                 dataBool[i][j] = static_cast<bool>(newData[i][j]);
             }
         }

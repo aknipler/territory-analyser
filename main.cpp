@@ -19,17 +19,38 @@ int main() {
     //     return 1;
     // }
 
+    analyser.updateRender("player");
+    analyser.updateRender("team");
+
+    if (!outputForTests(analyser, config, "FinalTestingOutput")) {std::cerr << "Error: Could not write final testing image." << std::endl;return 1;}
+    exit(0);
     // Measure tests
     if (initBoardStatePath == "examples/example1.txt") {
         measureAndLogExecutionTime<int>("add one (final => slowest) building", 
             std::function<int()>([&analyser]() { analyser.updateBuilding(27,14,"Blacksmith",3, "add"); return 0; } )
         );
         
-        measureAndLogExecutionTime<int>("remove one (final => slowest) building", 
+        measureAndLogExecutionTime<int>("remove one (final => slowest) building",
             std::function<int()>([&analyser]() { analyser.updateBuilding(27,14,"Blacksmith",3, "remove"); return 0; } )
         );
-        
-        
+
+        // Fast-path flip test: an isolated p1 Castle dropped deep inside p4's walled enclosure.
+        // It is Chebyshev-2 clear (-> fast path) and its radius-8 influence contests p4's boosted
+        // interior fill, flipping its dominant -> exercises the anyFlip -> global-tail rebuild.
+        // Expect a "[FAST-PATH FLIP] mod=add ..." line, a render snapshot, then "mod=remove".
+        measureAndLogExecutionTime<int>("add isolated Castle (fast-path flip test)",
+            std::function<int()>([&analyser]() { analyser.updateBuilding(24,35,"Castle",1, "add"); return 0; } )
+        );
+        analyser.updateRender("player");
+        analyser.updateRender("team");
+        if (!outputForTests(analyser, config, "castle_flip_test")) {
+            std::cerr << "Error: Could not write castle flip test image." << std::endl;
+            return 1;
+        }
+        measureAndLogExecutionTime<int>("remove isolated Castle (fast-path flip test)",
+            std::function<int()>([&analyser]() { analyser.updateBuilding(24,35,"Castle",1, "remove"); return 0; } )
+        );
+
         analyser.updateRender("player");
         analyser.updateRender("team");
         
@@ -41,7 +62,7 @@ int main() {
         }
 
         std::cout << std::endl;
-        measureAndLogExecutionTime<int>("remove connected building", 
+        measureAndLogExecutionTime<int>("remove connected building",
             // std::function<int()>([&analyser]() { analyser.updateBuilding(7,29,"House",2, "remove"); return 0; } )
             std::function<int()>([&analyser]() { analyser.updateBuilding(17,42,"House",4, "remove"); return 0; } )
         );

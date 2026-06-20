@@ -37,6 +37,21 @@ struct SignedPairHash {
     }
 };
 
+// Outcome of a fill's rigorous closure analysis: the set of players whose walls
+// (plus free walls — map edges and terrain boundaries) geometrically enclose the
+// fill. Closure is PURELY GEOMETRIC — no ownership gate — so it cannot be
+// self-reinforced by dominance and does not change when a fill's owner changes.
+// getDominantPlayer() boosts every encloser, so the dominant-among-enclosers wins
+// (and a player who walled themselves in can overcome an enemy bleeding influence
+// into the ring). An empty set means no player encloses the fill; a multi-element
+// set is fine (e.g. nested walls) — boosting all of them lets dominance decide.
+struct ClosureResult {
+    std::set<size_t> enclosers;
+
+    bool encloses(size_t playerID) const { return enclosers.count(playerID) > 0; }
+    bool empty() const { return enclosers.empty(); }
+};
+
 class Fill {
 private:
     int indx;
@@ -47,11 +62,13 @@ private:
     std::unordered_map<size_t, size_t> playerCellCount_;
     std::unordered_map<size_t, double> playerWeightCount_;
     std::vector<double> preUpdateCellValues_; // territory value per cell at last registration/update
-    size_t closureOwner_ = 0; // player who rigourously encloses this fill (0 = none)
+    ClosureResult closure_; // result of the rigorous enclosure analysis for this fill
     bool walkableTerrain_;
     std::array<int, 4> bounds_{}; // minX, maxX, minY, maxY
     std::unordered_set<std::pair<int, int>, SignedPairHash> mapEdgeCells_; // cells touching map boundary (may have negative coords for outside boundary)
+    std::unordered_set<Position, PositionHash> terrainBoundaryCells_; // in-bounds cells of the *opposite* terrain that border this fill (free walls, like map edges)
     std::unordered_map<size_t, std::set<std::pair<int, int>>> obstructionNeighbours_;
+    int groupId_ = -1; // index of the merge-group this fill belongs to; fills sharing a groupId are treated as one region without being destructively merged
 
 
 public:
@@ -67,8 +84,12 @@ public:
     void removeConnectedGapSet(const std::set<Position>& connectedSet);
     void addFillObstructionNeighbour(size_t playerID, int x, int y);
     void countCellAttributes(size_t playerID, double weight);
-    void setClosureOwner(size_t playerID);
-    size_t getClosureOwner() const;
+    void setClosure(const ClosureResult& closure);
+    const ClosureResult& getClosure() const;
+    void addTerrainBoundaryCell(size_t x, size_t y);
+    const std::unordered_set<Position, PositionHash>& getTerrainBoundaryCells() const;
+    void setGroupId(int groupId);
+    int getGroupId() const;
 
     /** @brief Appends all cell data from other (cells, gaps, dilation, bounds, etc.) and resolves closure owner. */
     void merge(const Fill& other);
@@ -150,6 +171,29 @@ FillResult updateFill(
     const std::vector<std::vector<std::vector<bool>>>& playerObstructionBoards,
     size_t numPlayers,
     const std::vector<size_t>& dsuGroupBounds,     // {minX, maxX, minY, maxY} of the touching building cluster
+    const std::vector<std::vector<size_t>>* WalkableTerrainBoard = nullptr,
+    const std::vector<bool>* defeatedPlayers = nullptr,
+    const std::string& stepLabel = ""              // debug: tag (e.g. "player"/"team") for updateFillSteps dumps
+);
+
+/**
+ * @brief Debug consistency net. Re-runs initialiseFill() from scratch on the SAME post-update
+ *        inputs and diffs the order-independent invariants — per-cell fillBoard ownership and the
+ *        per-player gap-cell SETS — against the given incremental result. Logs every divergence
+ *        with coordinates. Returns true if consistent.
+ *
+ *        This is the ground-truth oracle for the incremental fast/slow paths: anything they get
+ *        wrong (e.g. a missing gap after a removal) shows up here as a mismatch vs. the full
+ *        recompute. Gated by config.validateIncrementalFills; it does a full recompute so it
+ *        roughly doubles the cost of each incremental op — testing only.
+ */
+bool validateAgainstFullRecompute(
+    const FillResult& incremental,
+    const std::string& label,
+    const std::vector<std::vector<double>>& plLocalTerritories,
+    const std::vector<std::vector<int>>& masterObstructionBoard,
+    const std::vector<std::vector<std::vector<bool>>>& playerObstructionBoards,
+    size_t numPlayers,
     const std::vector<std::vector<size_t>>* WalkableTerrainBoard = nullptr,
     const std::vector<bool>* defeatedPlayers = nullptr
 );

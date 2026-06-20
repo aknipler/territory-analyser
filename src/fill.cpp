@@ -2,6 +2,16 @@
 #include "header.h"
 
 
+// ---------- combineClosure ----------
+
+// Unions two closure results — the combined set of enclosing players. Used by
+// the (currently dead-but-retained) Fill::merge. Since closure is a pure
+// geometric set, combining is simply set union.
+static ClosureResult combineClosure(const ClosureResult& a, const ClosureResult& b) {
+    ClosureResult out = a;
+    out.enclosers.insert(b.enclosers.begin(), b.enclosers.end());
+    return out;
+}
 
 
 // ---------- Fill methods ----------
@@ -149,12 +159,28 @@ void Fill::countCellAttributes(size_t playerID, double weight) {
     playerWeightCount_[playerID] += weight;
 }
 
-void Fill::setClosureOwner(size_t playerID) {
-    closureOwner_ = playerID;
+void Fill::setClosure(const ClosureResult& closure) {
+    closure_ = closure;
 }
 
-size_t Fill::getClosureOwner() const {
-    return closureOwner_;
+const ClosureResult& Fill::getClosure() const {
+    return closure_;
+}
+
+void Fill::addTerrainBoundaryCell(size_t x, size_t y) {
+    terrainBoundaryCells_.emplace(x, y);
+}
+
+const std::unordered_set<Position, PositionHash>& Fill::getTerrainBoundaryCells() const {
+    return terrainBoundaryCells_;
+}
+
+void Fill::setGroupId(int groupId) {
+    groupId_ = groupId;
+}
+
+int Fill::getGroupId() const {
+    return groupId_;
 }
 
 // ---------- Fill::merge ----------
@@ -172,6 +198,7 @@ void Fill::merge(const Fill& other) {
     dilationCells_.insert(other.dilationCells_.begin(), other.dilationCells_.end());
     connectedGapSets_.insert(connectedGapSets_.end(), other.connectedGapSets_.begin(), other.connectedGapSets_.end());
     mapEdgeCells_.insert(other.mapEdgeCells_.begin(), other.mapEdgeCells_.end());
+    terrainBoundaryCells_.insert(other.terrainBoundaryCells_.begin(), other.terrainBoundaryCells_.end());
     for (const auto& kv : other.obstructionNeighbours_) {
         obstructionNeighbours_[kv.first].insert(kv.second.begin(), kv.second.end());
     }
@@ -182,13 +209,10 @@ void Fill::merge(const Fill& other) {
     for (const auto& kv : other.playerCellCount_) {
         playerCellCount_[kv.first] += kv.second;
     }
-    // Merge closure owner: keep if both agree, recalculate from merged fill if contested
-    if (closureOwner_ == 0) {
-        closureOwner_ = other.closureOwner_;
-    } else if (other.closureOwner_ != 0 && other.closureOwner_ != closureOwner_) {
-        closureOwner_ = 0; // neutralise before recalculation so neither side gets the walled bonus
-        closureOwner_ = getDominantPlayer();
-    }
+    // Combine closure purely from geometric evidence: agree -> keep, disagree -> contested.
+    // Never re-derive from getDominantPlayer(), which would let cell-count dominance
+    // feed back into the (geometric) closure boost.
+    closure_ = combineClosure(closure_, other.closure_);
 }
 
 /**
@@ -369,46 +393,58 @@ void Fill::batchConvertDilationToFill(
 
 /**
  * @brief Returns the player id that owns this fill, or 0 if no player clears both the
- *        ownershipThreshold (cell fraction) and contestedOwnershipThreshold (share of investment).
- *        A sole-enclosure bonus (isWalledMultiplier) is applied when closureOwner_ matches the
- *        candidate player.
+ *        ownershipThreshold (boosted cell fraction) and contestedOwnershipThreshold
+ *        (unboosted share of investment).  Every player in the geometric closure set gets
+ *        their effective count multiplied by isWalledMultiplier, so the dominant-among-
+ *        enclosers wins — a player who walled themselves in can overcome an enemy bleeding
+ *        influence into the ring.  The contested gate is intentionally left UN-boosted so a
+ *        genuinely split region still can't be claimed on a boost alone.
  */
 size_t Fill::getDominantPlayer() const {
     const Config& config = AppConfig::get();
 
-    size_t maxCount = 0, playerWithMax = 0, totalAdjustedInvestment = 0;
     const double ownershipThreshold = config.ownershipThreshold;
     const double contestedOwnershipThreshold = config.contestedOwnershipThreshold;
     const double isWalledMultiplier = config.isWalledMultiplier;
 
-    size_t soleObstructionOwner = closureOwner_;
-
-    // Find player with max count
+    size_t totalAdjustedInvestment = 0;
     for (const auto& kv : playerCellCount_) {
         totalAdjustedInvestment += kv.second;
-        if (kv.second > maxCount) {
-            maxCount = kv.second;
-            playerWithMax = kv.first;
-            if (config.testingMode) {
-                if (soleObstructionOwner != 0 && soleObstructionOwner >= 0 && soleObstructionOwner < 10) {
-                    std::cout << "Player " << soleObstructionOwner << " rigourously encloses this fill (x" << isWalledMultiplier << " boost applied)" << std::endl;
-                    std::cout << "Player " << playerWithMax << " has max adjusted count: " << maxCount << " vs cells count: " << cells_.size() << " i.e. " << std::fixed << std::setprecision(1) << (static_cast<double>(maxCount) / cells_.size() * 100.0) << "%" << std::endl;
-                    std::cout << "Boosted ownership percentage: " << std::fixed << std::setprecision(1) << (static_cast<double>(maxCount) / cells_.size() * 100.0 * (soleObstructionOwner != 0 && playerWithMax == soleObstructionOwner ? isWalledMultiplier : 1)) << "%" << std::endl;
-                }
-            }
+    }
+
+    if (cells_.empty() || totalAdjustedInvestment == 0) {
+        return 0;
+    }
+
+    // Boost every encloser, then pick the winner by effective (boosted) count.
+    double bestEffective = -1.0;
+    size_t winner = 0;
+    size_t winnerRawCount = 0;
+    for (const auto& kv : playerCellCount_) {
+        const double effective = static_cast<double>(kv.second)
+            * (closure_.encloses(kv.first) ? isWalledMultiplier : 1.0);
+        if (effective > bestEffective) {
+            bestEffective = effective;
+            winner = kv.first;
+            winnerRawCount = kv.second;
         }
     }
 
-    // if (config.testingMode)
-
-    // Check if maxCount is enough to claim ownership,  (x2 for sole obstruction owner - this means a player has walled themselves in)
-    if (static_cast<double>(maxCount) * (soleObstructionOwner != 0 && playerWithMax == soleObstructionOwner ? isWalledMultiplier : 1) / cells_.size() > ownershipThreshold &&
-        static_cast<double>(maxCount) / totalAdjustedInvestment > contestedOwnershipThreshold) {
-        return playerWithMax;
-    } else {
-        return 0; // not enough to claim ownership
+    if (config.testingMode && closure_.encloses(winner)) {
+        std::cout << "Player " << winner << " rigourously encloses this fill (x" << isWalledMultiplier << " boost applied)" << std::endl;
+        std::cout << "Player " << winner << " raw count: " << winnerRawCount << " vs cells: " << cells_.size()
+                  << " i.e. " << std::fixed << std::setprecision(1) << (static_cast<double>(winnerRawCount) / cells_.size() * 100.0) << "%" << std::endl;
+        std::cout << "Boosted ownership percentage: " << std::fixed << std::setprecision(1)
+                  << (bestEffective / cells_.size() * 100.0) << "%" << std::endl;
     }
 
+    // Ownership fraction uses the boosted (effective) count; the contested-investment
+    // gate uses the raw count so a boost can't fake a player's share of total investment.
+    if (bestEffective / static_cast<double>(cells_.size()) > ownershipThreshold &&
+        static_cast<double>(winnerRawCount) / static_cast<double>(totalAdjustedInvestment) > contestedOwnershipThreshold) {
+        return winner;
+    }
+    return 0; // not enough to claim ownership
 }
 
 const std::vector<Position>& Fill::getCells() const { return cells_; }
@@ -612,7 +648,7 @@ BranchResult findPlayerObstructionThroughBranch(
 // Returns 0 if none or if contested.
 // Note: Closure detection now relies on cycle detection; paths anchored to map edges are
 // implicitly handled via mapEdgeCells in the boundary graph.
-static size_t checkClosureOwner(
+static ClosureResult checkClosureOwner(
     const Fill& fill,
     const std::vector<std::vector<std::vector<bool>>>& playerObstructionBoards,
     const std::vector<std::vector<bool>>&  obstructionsBoard,
@@ -623,36 +659,29 @@ static size_t checkClosureOwner(
     int thisFillIndex)
 {
 
-    // Early exit optimization: if only one player and Gaia obstruct the fill,
-    // then that player trivially encloses it
+    // Candidate pruning (Option A): if exactly one non-Gaia player has obstructions
+    // bordering this fill, then no OTHER player can possibly enclose it — so we still
+    // run the full rigorous test, but only for that one candidate. This is a sound
+    // optimisation (not a shortcut): a player with no obstruction neighbour here is
+    // never a valid encloser, and is already skipped by the per-pid loop below.
+    // When pruned, the enemy-obstruction DFS never fires (there are no enemy
+    // neighbours), so the saved work is just the boundary BFS for absent players.
     const auto& obstNeighbours = fill.getFillObstructionNeighbours();
+    size_t prunedCandidate = 0; // 0 = no pruning (multiple players present)
     {
         size_t candidatePlayer = 0;
         bool onlyOnePlayer = true;
-        int totalObs = 0;
         for (const auto& playerEntry : obstNeighbours) {
-            for (const auto& cell : playerEntry.second) {
-                int x = cell.first;
-                int y = cell.second;
-                // std::cout << "Obstacles for player: " << playerEntry.first << "located at: " << x << "," << y << std::endl;
-            }
-            if (playerEntry.first == 0) {
-                totalObs += playerEntry.second.size();
-            }
-            if (playerEntry.first != 0) {  // Not Gaia
-                if (candidatePlayer == 0) {
-                    candidatePlayer = playerEntry.first;  // Found first non-Gaia player
-                    totalObs += playerEntry.second.size();
-                } else if (playerEntry.first != candidatePlayer) {
-                    onlyOnePlayer = false;  // Found a second non-Gaia player
-                    break;
-                }
+            if (playerEntry.first == 0) continue; // Gaia is a free wall, not a candidate
+            if (candidatePlayer == 0) {
+                candidatePlayer = playerEntry.first;  // First non-Gaia player
+            } else if (playerEntry.first != candidatePlayer) {
+                onlyOnePlayer = false;  // A second distinct non-Gaia player
+                break;
             }
         }
-        if (onlyOnePlayer && candidatePlayer > 0 && totalObs > 9) {
-            // Only one player (and possibly Gaia) obstruct this fill
-            std::cout << "Early exit closure detection: only player " << candidatePlayer << " obstructs this fill, so they are the sole enclosure candidate." << std::endl;
-            return candidatePlayer;
+        if (onlyOnePlayer && candidatePlayer > 0) {
+            prunedCandidate = candidatePlayer;
         }
     }
 
@@ -671,17 +700,22 @@ static size_t checkClosureOwner(
         }
     }
 
-    size_t enclosedBy = 0;
-    
+    ClosureResult closureResult; // empty encloser set; players are inserted as they qualify
+
     // auto pid_start = std::chrono::high_resolution_clock::now();
     // auto init_duration = std::chrono::duration_cast<std::chrono::microseconds>(pid_start - cCOpt1_start).count();
     // std::cout << "TIMING: Initialization took " << init_duration << " microseconds." << std::endl;
 
 
     for (size_t pid = 1; pid <= numPlayers; ++pid) {
-        
+
+        // Candidate pruning: when only one player borders the fill, skip everyone else.
+        if (prunedCandidate != 0 && pid != prunedCandidate) {
+            continue;
+        }
+
         // auto pid_start = std::chrono::high_resolution_clock::now();
-        // If 
+        // If
         if (obstNeighbours.find(pid) == obstNeighbours.end()) {
             continue;
         }
@@ -771,6 +805,17 @@ static size_t checkClosureOwner(
             // Gap cells can be the only cells that expose an owned obstruction or
             // terrain boundary to the candidate closure chain.
             // checkNeighboursForBoundary(static_cast<int>(gp.first), static_cast<int>(gp.second));
+        }
+
+        // Terrain boundaries (e.g. the shoreline ring around an island) are free walls,
+        // just like the map edge. We add them to the boundary graph so a player whose
+        // obstructions only partially wall a region can still close it against gaia
+        // terrain. Because this is inside the per-pid loop (which already skipped any
+        // player with no obstruction neighbour on this fill), a player with zero
+        // presence can never claim a region via a pure-terrain ring — that would make
+        // every water-bounded fill contested. Presence-gating is therefore free here.
+        for (const auto& tc : fill.getTerrainBoundaryCells()) {
+            boundary.insert(tc);
         }
 
         
@@ -943,62 +988,60 @@ static size_t checkClosureOwner(
                     continue;
                 }
 
-                bool ownerConsistent = true;
-                bool sawInsideFill = false;
+            //     bool ownerConsistent = true;
+            //     bool sawInsideFill = false;
 
-                if (allFills != nullptr && preMergeDominantOwners != nullptr
-                    && allFills->size() == preMergeDominantOwners->size()) {
-                    for (size_t otherIdx = 0; otherIdx < allFills->size(); ++otherIdx) {
-                        if (static_cast<int>(otherIdx) == thisFillIndex) {
-                            continue;
-                        }
-                        if (!boundsContain(mergedBounds, (*allFills)[otherIdx].getBounds())) {
-                            continue;
-                        }
+                // AK: Check what this code was meant to fix. Right now its behaviour doesn't make any sense.
+                // if (allFills != nullptr && preMergeDominantOwners != nullptr
+                //     && allFills->size() == preMergeDominantOwners->size()) {
+                //     for (size_t otherIdx = 0; otherIdx < allFills->size(); ++otherIdx) {
+                //         if (static_cast<int>(otherIdx) == thisFillIndex) {
+                //             continue;
+                //         }
+                //         if (!boundsContain(mergedBounds, (*allFills)[otherIdx].getBounds())) {
+                //             continue;
+                //         }
 
-                        sawInsideFill = true;
-                        size_t insideOwner = (*preMergeDominantOwners)[otherIdx];
-                        if (insideOwner != 0 && insideOwner != pid) {
-                            ownerConsistent = false;
-                            break;
-                        }
-                    }
-                }
+                //         sawInsideFill = true;
+                //         size_t insideOwner = (*preMergeDominantOwners)[otherIdx];
+                //         if (insideOwner != 0 && insideOwner != pid) {
+                //             ownerConsistent = false;
+                //             break;
+                //         }
+                //     }
+                // }
 
                 // Require this fill itself to be compatible with the wall owner.
-                size_t thisOwner = 0;
-                if (preMergeDominantOwners != nullptr
-                    && thisFillIndex >= 0
-                    && static_cast<size_t>(thisFillIndex) < preMergeDominantOwners->size()) {
-                    thisOwner = (*preMergeDominantOwners)[static_cast<size_t>(thisFillIndex)];
-                }
+                // size_t thisOwner = 0;
+                // if (preMergeDominantOwners != nullptr
+                //     && thisFillIndex >= 0
+                //     && static_cast<size_t>(thisFillIndex) < preMergeDominantOwners->size()) {
+                //     thisOwner = (*preMergeDominantOwners)[static_cast<size_t>(thisFillIndex)];
+                // }
 
-                if (thisOwner != 0 && thisOwner != pid) {
-                    ownerConsistent = false;
-                }
+                // if (thisOwner != 0 && thisOwner != pid) {
+                //     ownerConsistent = false;
+                // }
 
-                // Accept either: enclosing this fill only, or enclosing a group where
-                // all non-contested enclosed fills share the same owner as the wall.
-                if (ownerConsistent && (sawInsideFill || thisOwner == pid || thisOwner == 0)) {
+                // Pure geometric closure: pid's boundary ring contains this fill.
+                // Ownership gates (insideOwner / thisOwner) are intentionally removed —
+                // see ClosureResult docs and getDominantPlayer (boost-all-enclosers).
                     playerCloses = true;
                     break;
-                }
             }
         }
 
         if (playerCloses) {
             if(config.testingMode == true) {
-                std::cout << "*&*&*&*&*&*&*& prev enclosed by " << enclosedBy << "New pid: " << pid << std::endl;
+                std::cout << "*&*&*&*&*&*&*& fill enclosed by pid " << pid
+                          << " (enclosers so far: " << closureResult.enclosers.size() << ")" << std::endl;
             }
-            if (enclosedBy == 0) {
-                enclosedBy = pid;
-            } else {
-                return -1; // contested
-            }
+            // Accumulate every enclosing player; getDominantPlayer boosts them all.
+            closureResult.enclosers.insert(pid);
         }
     }
 
-    return enclosedBy;
+    return closureResult;
 }
 
 // ---------- dilateObstructionsAndTerrain ----------
@@ -1179,7 +1222,7 @@ static void mergeFills(
     // Step 4a - Compute closure owner before merge decisions so
     // getDominantPlayer() uses current closure information.
     for (size_t fi = 0; fi < fills.size(); ++fi) {
-        fills[fi].setClosureOwner(checkClosureOwner(
+        fills[fi].setClosure(checkClosureOwner(
             fills[fi],
             localObstructionBoards,
             obstructionsBoard,
@@ -1191,8 +1234,13 @@ static void mergeFills(
             &preMergeDominantOwners,
             static_cast<int>(fi)));
 
-        // if (config.testingMode && fills[fi].getClosureOwner() != 0) {
-            std::cout << "Fill " << fi << " rigourously enclosed by player " << fills[fi].getClosureOwner() << std::endl;
+        // if (config.testingMode && !fills[fi].getClosure().empty()) {
+            const ClosureResult& fc = fills[fi].getClosure();
+            if (!fc.empty()) {
+                std::cout << "Fill " << fi << " rigourously enclosed by player(s):";
+                for (size_t encloser : fc.enclosers) std::cout << " " << encloser;
+                std::cout << std::endl;
+            }
         // }
 
         if(config.testingMode && fi >= 3) {
@@ -1230,65 +1278,95 @@ static void mergeFills(
         }
     }
 
-    // Remove gap groups that are now internal to merged groups
-    std::unordered_map<int, std::set<int>> rootMembers;
+    // NOTE: removeInternalGapGroups (destructive removal of seam gaps between merged
+    // fills) is intentionally disabled. Internal-vs-external gap classification is now
+    // done non-destructively at the end, in removeShapesByGapThreshold, using the final
+    // groupIds — robust whether two fills connect directly or via a bridge fill. The gap
+    // groups themselves are preserved (closure analysis already consumed them earlier).
+    // std::unordered_map<int, std::set<int>> rootMembers;
+    // for (int fi = 0; fi < n; fi++) {
+    //     rootMembers[uf.find(fi)].insert(fi);
+    // }
+    // for (int fi = 0; fi < n; fi++) {
+    //     int root = uf.find(fi);
+    //     if (rootMembers[root].size() > 1) {
+    //         fills[fi].removeInternalGapGroups(cellsToFill, rootMembers[root]);
+    //     }
+    // }
+
+    // Group fills by union-find root WITHOUT destructively merging them.
+    // Each fill keeps its own cells, bounds, gaps and closure; we only stamp a
+    // shared groupId so downstream code can aggregate same-owner connected fills
+    // into one region (group dominant player, group-level cell/gap thresholds)
+    // while retaining the ability to treat — and later un-merge — them individually.
+    std::unordered_map<int, int> rootToGroup;
     for (int fi = 0; fi < n; fi++) {
-        rootMembers[uf.find(fi)].insert(fi);
-    }
-    for (int fi = 0; fi < n; fi++) {
-        int root = uf.find(fi);
-        if (rootMembers[root].size() > 1) {
-            fills[fi].removeInternalGapGroups(cellsToFill, rootMembers[root]);
-        }
+        const int root = uf.find(fi);
+        auto [it, inserted] = rootToGroup.try_emplace(root, static_cast<int>(rootToGroup.size()));
+        fills[fi].setGroupId(it->second);
     }
 
-    // Rebuild fills by union-find groups
-    std::unordered_map<int, int> rootToIdx;
-    std::vector<Fill> merged;
-    for (int fi = 0; fi < n; fi++) {
-        int root = uf.find(fi);
-        auto it = rootToIdx.find(root);
-        if (it != rootToIdx.end()) {
-            merged[it->second].merge(fills[fi]);
-        } else {
-            rootToIdx[root] = static_cast<int>(merged.size());
-            merged.push_back(std::move(fills[fi]));
-        }
-    }
-    fills = std::move(merged);
-    
-    // Filter out fills with less than 6 cells
-    fills.erase(std::remove_if(fills.begin(), fills.end(), 
-        [](const Fill& f) { return f.getCells().size() < 4; }), 
-        fills.end());
-    
+    // NOTE: the <4-cell and gap-count filters are intentionally NOT applied here.
+    // They are now group-aware and live in removeShapesByGapThreshold(), which runs
+    // after this and drops whole groups (not individual sub-fills) that fail.
+
     // mFEnd = std::chrono::high_resolution_clock::now();
-    // mFTime = std::chrono::duration_cast<std::chrono::milliseconds>(mFEnd - mFStart); 
+    // mFTime = std::chrono::duration_cast<std::chrono::milliseconds>(mFEnd - mFStart);
     // std::cout << "merge fill second half time taken: " << mFTime.count() << "ms" << std::endl;
 }
 
 // ---------- removeShapesByGapThreshold ----------
 
 /**
- * @brief Discards fills whose gap-group count exceeds CLOSED_SHAPE_GAPS_THRESHOLD, retaining
- *        only fills that represent reasonably enclosed shapes (step 5).
+ * @brief Shape filter (step 5), run after grouping. For each fill, counts its EXTERNAL gap groups
+ *        — a gap group is internal (ignored) iff every one of its cells maps, via cellsToFill, to a
+ *        fill in the SAME group; otherwise it is external. This is the non-destructive replacement
+ *        for removeInternalGapGroups, computed against the final groupIds. A fill is dropped if its
+ *        external gap count exceeds CLOSED_SHAPE_GAPS_THRESHOLD. (The singleton-group <4-cell
+ *        "noise" drop was removed — it was eating small bridge fills that hold real gap groups.)
+ *
+ *        cellsToFill must still index the live fills vector (true here: nothing has reordered fills
+ *        since mergeFills stamped the groupIds), so we compute all external counts before erasing.
  */
-static void removeShapesByGapThreshold(std::vector<Fill>& fills)
+static void removeShapesByGapThreshold(std::vector<Fill>& fills,
+                                       const std::vector<std::vector<int>>& cellsToFill)
 {
     const Config& config = AppConfig::get();
+    const size_t gapThreshold = static_cast<size_t>(config.CLOSED_SHAPE_GAPS_THRESHOLD);
+    const int n = static_cast<int>(fills.size());
 
-    std::vector<Fill> filtered;
-    filtered.reserve(fills.size());
-    int fIdx = 0; 
-    for (auto& f : fills) {
-        // std::cout << "Fill " << fIdx << " has " << f.numGapGroups() << " gap groups." << std::endl;
-        if (f.numGapGroups() <= config.CLOSED_SHAPE_GAPS_THRESHOLD) {
-            // std::cout << "Keeping fill " << fIdx << " with " << f.numGapGroups() << " gap groups." << std::endl;
-            filtered.push_back(std::move(f));
-        }
-        fIdx++;
+    // fill index -> groupId.
+    std::vector<int> fillGroup(n, -1);
+    for (int i = 0; i < n; ++i) {
+        fillGroup[i] = fills[i].getGroupId();
     }
-    fills = std::move(filtered);
+
+    // External gap group: at least one of its cells points (via cellsToFill) to a fill
+    // outside this fill's group (or to no fill at all / an opening).
+    auto externalGapCount = [&](int fi) -> size_t {
+        const int myGroup = fillGroup[fi];
+        size_t count = 0;
+        for (const auto& gg : fills[fi].getGapGroups()) {
+            const bool allInternal = std::all_of(gg.begin(), gg.end(),
+                [&](const Position& gp) {
+                    const int other = cellsToFill[gp.first][gp.second];
+                    return other >= 0 && other < n && fillGroup[other] == myGroup;
+                });
+            if (!allInternal) ++count;
+        }
+        return count;
+    };
+
+    // Decide drops up front (indices stay valid until we erase).
+    std::vector<char> drop(n, 0);
+    for (int i = 0; i < n; ++i) {
+        drop[i] = (externalGapCount(i) > gapThreshold) ? 1 : 0;
+    }
+
+    int idx = 0;
+    fills.erase(std::remove_if(fills.begin(), fills.end(),
+        [&](const Fill&) { return drop[idx++] == 1; }),
+        fills.end());
 }
 
 // ---------- keepOnlyGapConnected ----------
@@ -1309,7 +1387,7 @@ static std::unordered_set<Position, PositionHash> keepOnlyGapConnected(
     const std::vector<std::vector<size_t>>* WalkableTerrainBoard,
     int width,
     int height,
-    std::unordered_set<Position, PositionHash>* thisFillGapCellsOut)
+    std::vector<std::unordered_set<Position, PositionHash>>* thisFillGapCellsOut)
 {
     auto sameTerrainAt = [&](int x, int y) {
         return WalkableTerrainBoard == nullptr
@@ -1322,6 +1400,7 @@ static std::unordered_set<Position, PositionHash> keepOnlyGapConnected(
     std::vector<Position> s; // use vector as stack (LIFO via push_back/pop_back)
 
     // Seed: remaining dilation cells directly adjacent to a gap cell.
+    // This is necessary so that stray dilation cells are not included. Rigorous
     for (const auto& dCell : remaining) {
         bool touchesGap = false;
 
@@ -1347,33 +1426,48 @@ static std::unordered_set<Position, PositionHash> keepOnlyGapConnected(
         }
     }
 
-    std::unordered_set<Position, PositionHash> thisFillGapCells;
+    std::vector<std::unordered_set<Position, PositionHash>> thisFillGapCells;
+    std::vector<Position> group;
 
     // Flood through remaining dilation cells.
     while (!s.empty()) {
+
         Position cur = s.back();
         s.pop_back();
 
-        for (int d = 0; d < 4; d++) {
-            int nextX = static_cast<int>(cur.first) + dx4[d];
-            int nextY = static_cast<int>(cur.second) + dy4[d];
-            if (nextX < 0 || nextX >= width || nextY < 0 || nextY >= height) {
-                continue;
-            }
-            if (!sameTerrainAt(nextX, nextY)) {
-                continue;
+        group.push_back(cur);
+        std::unordered_set<Position, PositionHash> thisFillGapCellGroup;
+
+        while (!group.empty()) {
+            auto top = group.back();
+            group.pop_back();
+            if (std::find(s.begin(), s.end(), top) != s.end()) {
+                s.erase(std::remove(s.begin(), s.end(), top), s.end());
             }
 
-            Position np{static_cast<size_t>(nextX), static_cast<size_t>(nextY)};
 
-            if (cellsToFill[nextX][nextY] == fillIdx || toConvert.count(np)) {
-                thisFillGapCells.emplace(cur);
-            }
-            if (remaining.count(np) && !gapConnected.count(np)) {
-                gapConnected.insert(np);
-                s.push_back(np);
+            for (int d = 0; d < 4; d++) {
+                int nextX = static_cast<int>(top.first) + dx4[d];
+                int nextY = static_cast<int>(top.second) + dy4[d];
+                if (nextX < 0 || nextX >= width || nextY < 0 || nextY >= height) {
+                    continue;
+                }
+                if (!sameTerrainAt(nextX, nextY)) {
+                    continue;
+                }
+
+                Position np{static_cast<size_t>(nextX), static_cast<size_t>(nextY)};
+
+                if (cellsToFill[nextX][nextY] == fillIdx || toConvert.count(np)) {
+                    thisFillGapCellGroup.emplace(top);
+                }
+                if (remaining.count(np) && !gapConnected.count(np)) {
+                    gapConnected.insert(np);
+                    group.push_back(np);
+                }
             }
         }
+        thisFillGapCells.emplace_back(std::move(thisFillGapCellGroup));
     }
 
     // Remaining dilation cells not connected to any gap should convert to fill.
@@ -1394,9 +1488,12 @@ static std::unordered_set<Position, PositionHash> keepOnlyGapConnected(
 // ---------- encodeFillsAndGapsForOutput ----------
 
 /**
- * @brief Iterates the final fill list, encodes each fill's dominant player into result.fillBoard
- *        as a power-of-two bitmask, and collects gap-group cells per dominant player into allGaps.
- *        Fills with no dominant player (dp == 0) contribute to allGaps[0] but are not encoded.
+ * @brief Encodes each fill into result.fillBoard as a power-of-two ownership bitmask and collects
+ *        gap cells per owner into allGaps. Ownership is per-fill (getDominantPlayer): because the
+ *        union step only groups fills that ALREADY share the same per-fill dominant, every member
+ *        of a group encodes to the same owner anyway — so per-fill encoding renders a connected
+ *        same-owner region contiguously without needing group-level aggregation. Fills with no
+ *        dominant player (dp == 0) contribute gaps to allGaps[0] but encode nothing.
  */
 static std::vector<std::vector<Position>> encodeFillsAndGapsForOutput(
     const std::vector<Fill>& fills,
@@ -1407,15 +1504,11 @@ static std::vector<std::vector<Position>> encodeFillsAndGapsForOutput(
 {
     std::vector<std::vector<Position>> allGaps(numPlayers + 1);
     result.fillBoard.assign(width, std::vector<size_t>(height, 0));
-    std::vector<std::vector<size_t>> outputForTesting(width, std::vector<size_t>(height, 0));
 
-    size_t fillIdx = 0;
     for (const auto& fill : fills) {
-        fillIdx++;
-        // get the dominant player of the fill
-        size_t dp = fill.getDominantPlayer();
+        const size_t dp = fill.getDominantPlayer();
 
-        // save the gaps for later use
+        // Save the fill's gaps under its dominant player (or under 0 if unowned).
         if (dp < allGaps.size()) {
             for (const auto& gg : fill.getGapGroups()) {
                 allGaps[dp].insert(allGaps[dp].end(), gg.begin(), gg.end());
@@ -1426,18 +1519,11 @@ static std::vector<std::vector<Position>> encodeFillsAndGapsForOutput(
             continue;
         }
 
-        // encode the fill cells and save
         const size_t encoded_player_value = static_cast<size_t>(1) << (dp - 1);
         for (const auto& cell : fill.getCells()) {
-            // outputForTesting[cell.first][cell.second] = fillIdx;
             result.fillBoard[cell.first][cell.second] = encoded_player_value;
         }
     }
-    // printBoard(outputForTesting); // For config.testingMode
-    
-    // DEBUG: Print fillBoard to see encoded player values
-    // std::cout << "DEBUG: fillBoard (encoded player values):" << std::endl;
-    // printBoard(outputForTesting);
 
     return allGaps;
 }
@@ -1490,7 +1576,13 @@ static void buildDilationComponent(
             int nextX = cellX + dx4[d];
             int nextY = cellY + dy4[d];
             if (nextX < 0 || nextX >= width || nextY < 0 || nextY >= height) continue;
-            if (!sameTerrainAt(nextX, nextY)) continue;
+            if (!sameTerrainAt(nextX, nextY)) {
+                // Opposite-terrain neighbour: this is a shoreline cell bordering the
+                // fill. Record it as a terrain boundary cell (a free wall) so the
+                // closure analysis can use it to enclose island-like regions.
+                fill.addTerrainBoundaryCell(static_cast<size_t>(nextX), static_cast<size_t>(nextY));
+                continue;
+            }
 
             Position np{static_cast<size_t>(nextX), static_cast<size_t>(nextY)};
 
@@ -1501,7 +1593,7 @@ static void buildDilationComponent(
             }
             // Keep track if the cell neighbours other fill: not wall, not dilation, not part of this Fill
             else if (!obstructionsBoard[nextX][nextY] && !dilatedWalls[nextX][nextY]
-                     && cellsToFill[nextX][nextY] != fillIdx ) {
+                     && (cellsToFill[nextX][nextY] != fillIdx && cellsToFill[nextX][nextY] >= 0)) {
                 gapCells.insert(top);
                 neighboursFill = true;
             }
@@ -1635,7 +1727,7 @@ static void gapAnalysisAndDilationConversion(
 
             // Phase 2: among remaining cells, keep only those that are gap connected
             // via 4-neighbour dilation connectivity.
-            std::unordered_set<Position, PositionHash> thisFillGapCells;
+            std::vector<std::unordered_set<Position, PositionHash>> thisFillGapCells;
             std::unordered_set<Position, PositionHash> gapConnected = keepOnlyGapConnected(
                 remaining,
                 gapCells,
@@ -1651,12 +1743,16 @@ static void gapAnalysisAndDilationConversion(
             // Persist this connected component for later closure analysis.
             fill.addConnectedGapSet(std::set<Position>(gapConnected.begin(), gapConnected.end()));
 
-            if (!thisFillGapCells.empty()) {
-                gapCells = std::move(thisFillGapCells);
-            }
-
             dilToConvert.insert(dilToConvert.end(), toConvert.begin(), toConvert.end());
-            fill.addGapGroup(std::vector<Position>(gapCells.begin(), gapCells.end()));
+            if (!thisFillGapCells.empty()) {
+                for (const auto& grp : thisFillGapCells) {
+                    if (!grp.empty()) {
+                        fill.addGapGroup(std::vector<Position>(grp.begin(), grp.end()));
+                    }
+                }
+            } else {
+                fill.addGapGroup(std::vector<Position>(gapCells.begin(), gapCells.end()));
+            }
         }
     }
 
@@ -1828,12 +1924,123 @@ static bool initialise(
     return true;
 }
 
+// ---------- renderFillStep ----------
+
+/**
+ * @brief Debug visualiser: composites one pipeline snapshot into a BGRA image and writes it to
+ *        output/initialiseFillSteps/<fileName>.png (rotated 90° CCW + 6x nearest upscale, matching
+ *        the other renders). Layer priority low→high: fill → dilation → water → gap → obstruction.
+ *        Colours: obstruction = per-player (gaia white); water = blue; dilation = orange;
+ *        gap = magenta; fill = tinted dominant-player colour (grey if unowned). Any of `walkable`,
+ *        `dilated`, `fills`, `floodOnly` may be null/empty for stages where they don't yet exist;
+ *        when `floodOnly` is given, all its cells are painted one fill colour (Pass-1 view).
+ */
+static void renderFillStep(
+    const std::string& fileName,
+    int width, int height,
+    const std::vector<std::vector<int>>& masterObstructionBoard,
+    const std::vector<std::vector<size_t>>* walkable,
+    const std::vector<std::vector<bool>>* dilated,
+    const std::vector<Fill>* fills,
+    const std::vector<std::vector<int>>* floodOnly,
+    bool showGaps,
+    const std::string& subDir = "initialiseFillSteps")
+{
+    const Config& config = AppConfig::get();
+
+    auto playerBGRA = [&](int id, bool tint) -> cv::Vec4b {
+        auto it = config.playerColours.find(id);
+        cv::Vec4b c = (it != config.playerColours.end())
+            ? cv::Vec4b(static_cast<uchar>(it->second[0]), static_cast<uchar>(it->second[1]),
+                        static_cast<uchar>(it->second[2]), 255)
+            : cv::Vec4b(128, 128, 128, 255);
+        if (tint) { // blend toward white for the softer "fill" shade
+            c[0] = static_cast<uchar>((c[0] + 255) / 2);
+            c[1] = static_cast<uchar>((c[1] + 255) / 2);
+            c[2] = static_cast<uchar>((c[2] + 255) / 2);
+        }
+        return c;
+    };
+
+    cv::Mat mat(width, height, CV_8UC4, cv::Scalar(0, 0, 0, 255));
+
+    // Layer 1 (lowest): fill cells.
+    if (floodOnly) {
+        const cv::Vec4b floodColour(120, 200, 120, 255); // light green — "all fills one colour"
+        for (int x = 0; x < width; ++x)
+            for (int y = 0; y < height; ++y)
+                if ((*floodOnly)[x][y] >= 0) mat.at<cv::Vec4b>(x, y) = floodColour;
+    } else if (fills) {
+        for (const auto& f : *fills) {
+            const size_t dp = f.getDominantPlayer();
+            const cv::Vec4b col = (dp > 0) ? playerBGRA(static_cast<int>(dp), true)
+                                           : cv::Vec4b(110, 110, 110, 255); // unowned fill = grey
+            for (const auto& cell : f.getCells())
+                if (static_cast<int>(cell.first) < width && static_cast<int>(cell.second) < height)
+                    mat.at<cv::Vec4b>(cell.first, cell.second) = col;
+        }
+    }
+
+    // Layer 2: dilation walls.
+    if (dilated && !dilated->empty()) {
+        const cv::Vec4b dilCol(0, 140, 255, 255); // orange (BGR)
+        for (int x = 0; x < width; ++x)
+            for (int y = 0; y < height; ++y)
+                if ((*dilated)[x][y] && masterObstructionBoard[x][y] == -1)
+                    mat.at<cv::Vec4b>(x, y) = dilCol;
+    }
+
+    // Layer 3: water / non-walkable terrain.
+    if (walkable) {
+        const cv::Vec4b waterCol(150, 60, 0, 255); // blue (BGR)
+        for (int x = 0; x < width && x < static_cast<int>(walkable->size()); ++x)
+            for (int y = 0; y < height && y < static_cast<int>((*walkable)[x].size()); ++y)
+                if ((*walkable)[x][y] == 0 && masterObstructionBoard[x][y] == -1)
+                    mat.at<cv::Vec4b>(x, y) = waterCol;
+    }
+
+    // Layer 4: gap cells (drawn over dilation/fill so they're distinct).
+    if (showGaps && fills) {
+        const cv::Vec4b gapCol(255, 0, 255, 255); // magenta
+        for (const auto& f : *fills)
+            for (const auto& gg : f.getGapGroups())
+                for (const auto& cell : gg)
+                    if (static_cast<int>(cell.first) < width && static_cast<int>(cell.second) < height)
+                        mat.at<cv::Vec4b>(cell.first, cell.second) = gapCol;
+    }
+
+    // Layer 5 (highest): obstructions, per owner (gaia = white).
+    for (int x = 0; x < width; ++x) {
+        for (int y = 0; y < height; ++y) {
+            const int o = masterObstructionBoard[x][y];
+            if (o == -1) continue;
+            if (o == 0) { mat.at<cv::Vec4b>(x, y) = cv::Vec4b(255, 255, 255, 255); continue; }
+            int owner = 0, v = o; while (v >>= 1) ++owner; // highest set bit → owner id
+            mat.at<cv::Vec4b>(x, y) = playerBGRA(owner + 1, false);
+        }
+    }
+
+    cv::Mat rotated, scaled;
+    cv::rotate(mat, rotated, cv::ROTATE_90_COUNTERCLOCKWISE);
+    cv::resize(rotated, scaled, cv::Size(), 6, 6, cv::INTER_NEAREST);
+
+    const std::filesystem::path dir =
+        std::filesystem::path(config.outputDirectory) / subDir;
+    std::error_code ec;
+    std::filesystem::create_directories(dir, ec);
+    cv::imwrite((dir / (fileName + ".png")).string(), scaled);
+}
+
 // ---------- completeBoardFill ----------
 
 /**
  * @brief Sweeps every non-obstruction, non-dilation, unvisited cell and seeds a flood fill from
- *        each, creating a new Fill object per connected region (step 2).  Immediately follows
- *        each flood fill with gap analysis and dilation conversion (step 3).
+ *        each, creating a new Fill object per connected region (step 2).  All flood fills run
+ *        first so that cellsToFill is fully populated before any gap analysis begins; this
+ *        prevents dilation cells from spuriously treating not-yet-filled cells (cellsToFill==-1)
+ *        as gaps.  Gap analysis and dilation conversion (step 3) then runs over all fills.
+ *        When dumpPass1Step is set, writes the pure-flood snapshot (between the two passes, before
+ *        any dilation conversion) as the "3_pass1_flood" debug image.
  */
 static void completeBoardFill(
     std::vector<Fill>& fills,
@@ -1846,8 +2053,10 @@ static void completeBoardFill(
     const std::vector<std::vector<int>>& masterPlayerObstructionBoard,
     std::vector<std::vector<bool>>& dilatedWalls,
     const std::vector<std::vector<size_t>>* WalkableTerrainBoard,
-    const std::vector<bool>* defeatedPlayers)
+    const std::vector<bool>* defeatedPlayers,
+    bool dumpPass1Step = false)
 {
+    // Pass 1 – flood fill every connected region; fully populates cellsToFill.
     for (int x = 0; x < width; ++x) {
         for (int y = 0; y < height; ++y) {
             if (obstructionsBoard[x][y] || dilatedWalls[x][y] || visited[x][y]) {
@@ -1864,19 +2073,27 @@ static void completeBoardFill(
                       return 0;
                 }) );
 
-            // Step 3 – Gap detection and dilation conversion
-            measureAndLogExecutionTime<int>("Step 3. gap analysis and dilation conversion for one fill",
-                std::function<int()>([&]() {
-            gapAnalysisAndDilationConversion(
-                fill, fillIdx, width, height,
-                plLocalTerritories, obstructionsBoard, masterPlayerObstructionBoard,
-                dilatedWalls, cellsToFill, visited,
-                WalkableTerrainBoard);
-                return 0;
-            }) );
-
             fills.push_back(std::move(fill));
         }
+    }
+
+    // Pass-1 snapshot: cellsToFill is the pure flood here, and dilatedWalls is still un-converted.
+    if (dumpPass1Step) {
+        renderFillStep("3_pass1_flood", width, height, masterPlayerObstructionBoard,
+                       WalkableTerrainBoard, &dilatedWalls, nullptr, &cellsToFill, false);
+    }
+
+    // Pass 2 – gap analysis and dilation conversion, now that every cell has a known fill index.
+    for (int fi = 0; fi < static_cast<int>(fills.size()); ++fi) {
+        measureAndLogExecutionTime<int>("Step 3. gap analysis and dilation conversion for one fill",
+            std::function<int()>([&]() {
+        gapAnalysisAndDilationConversion(
+            fills[fi], fi, width, height,
+            plLocalTerritories, obstructionsBoard, masterPlayerObstructionBoard,
+            dilatedWalls, cellsToFill, visited,
+            WalkableTerrainBoard);
+            return 0;
+        }) );
     }
 }
 
@@ -1904,6 +2121,12 @@ FillResult initialiseFill(
     // Initialise
     const Config& config = AppConfig::get();
 
+    // Debug step visualiser: capture only the FIRST initialiseFill run (the constructor's player
+    // board) so the per-op validation recomputes and slow-path fallbacks don't overwrite it.
+    static bool s_dumpedFillSteps = false;
+    const bool dumpSteps = config.dumpInitialiseFillSteps && !s_dumpedFillSteps;
+    if (dumpSteps) s_dumpedFillSteps = true;
+
     FillResult result;
     int width = 0;
     int height = 0;
@@ -1927,10 +2150,22 @@ FillResult initialiseFill(
         return result;
     }
 
+    // Step 0 snapshot: obstructions (per player) + water, on one board.
+    if (dumpSteps) {
+        renderFillStep("1_init", width, height, masterPlayerObstructionBoard,
+                       WalkableTerrainBoard, nullptr, nullptr, nullptr, false);
+    }
+
     // Steps 1, 1b, 1c – Dilate obstructions and terrain boundaries
-    std::vector<std::vector<bool>> dilatedWalls = measureAndLogExecutionTime<std::vector<std::vector<bool>>>("Step 1. dilate obstr and terrains", 
+    std::vector<std::vector<bool>> dilatedWalls = measureAndLogExecutionTime<std::vector<std::vector<bool>>>("Step 1. dilate obstr and terrains",
         std::function<std::vector<std::vector<bool>>()>([&]() { return dilateObstructionsAndTerrain(obstructionsBoard, WalkableTerrainBoard, width, height); })
     );
+
+    // Dilated snapshot: + all dilated walls in one colour.
+    if (dumpSteps) {
+        renderFillStep("2_dilated", width, height, masterPlayerObstructionBoard,
+                       WalkableTerrainBoard, &dilatedWalls, nullptr, nullptr, false);
+    }
 
     if(config.testingMode) {
         std::cout << "Obstructions Board:" << std::endl;
@@ -1957,15 +2192,27 @@ FillResult initialiseFill(
         masterPlayerObstructionBoard,
         dilatedWalls,
         WalkableTerrainBoard,
-        defeatedPlayers);
+        defeatedPlayers,
+        dumpSteps); // completeBoardFill writes "3_pass1_flood" between its two passes
 
         return 0;
     } ) );
+
+    // Pass-2 snapshot: fills + gap cells (gaps in their own colour, distinct from dilation).
+    if (dumpSteps) {
+        renderFillStep("4_pass2_gaps", width, height, masterPlayerObstructionBoard,
+                       WalkableTerrainBoard, &dilatedWalls, &fills, nullptr, true);
+    }
 
     // Step 3b – Materialise each connected-gap set as its own Fill object.
     measureAndLogExecutionTime<int>("Step 3b. materialise connected-gap sets",
         std::function<int()>([&]() { fillConnectedGapSets(fills, cellsToFill, plLocalTerritories, WalkableTerrainBoard, width, height); return 0; })
     );
+
+    if (dumpSteps) {
+        renderFillStep("5_after_3b_bridges", width, height, masterPlayerObstructionBoard,
+                       WalkableTerrainBoard, &dilatedWalls, &fills, nullptr, true);
+    }
     // dilatedWalls is intentionally not returned or persisted. After fillConnectedGapSets()
     // runs, connectedGapSets_ is emptied on all fills (gap-connected cells promoted to bridge
     // fill cells_). Remaining dilatedWalls==true cells are exactly the bridge fill cells,
@@ -1976,7 +2223,12 @@ FillResult initialiseFill(
         std::function<int()>([&]() { mergeFills(fills, cellsToFill, localObstructionBoards, obstructionsBoard, WalkableTerrainBoard, dilatedWalls, width, height, numPlayers); return 0; })
     );
 
-    
+    if (dumpSteps) {
+        renderFillStep("6_after_4_merge", width, height, masterPlayerObstructionBoard,
+                       WalkableTerrainBoard, &dilatedWalls, &fills, nullptr, true);
+    }
+
+
     std::vector<std::vector<int>> outputForTesting(width, std::vector<int>(height, 0));
     size_t Idx = 0;
     for (const auto& fill : fills) {
@@ -1998,10 +2250,15 @@ FillResult initialiseFill(
     }
     // printBoard(outputForTesting); // For config.testingMode
 
-    // Step 5 – Gap constraint: discard fills with more than 2 gap groups
+    // Step 5 – Gap constraint: discard fills with too many external gap groups
     measureAndLogExecutionTime<int>("Step 5. remove shapes by gap threshold",
-        std::function<int()>([&]() { removeShapesByGapThreshold(fills); return 0; })
+        std::function<int()>([&]() { removeShapesByGapThreshold(fills, cellsToFill); return 0; })
     );
+
+    if (dumpSteps) {
+        renderFillStep("7_after_5_threshold", width, height, masterPlayerObstructionBoard,
+                       WalkableTerrainBoard, &dilatedWalls, &fills, nullptr, true);
+    }
 
     // Step 6 and Step 7 – Collect gaps and encode dominant player fills
     std::vector<std::vector<Position>> allGaps = measureAndLogExecutionTime<std::vector<std::vector<Position>>>("Step 6/7. collect gaps and encode fills",
@@ -2054,7 +2311,30 @@ FillResult initialiseFill(
         // std::cout << "Player Local Territories Board:" << std::endl;
         // printBoard(plLocalTerritories); // For config.testingMode
         // std::cout << std::endl;
+
     }
+    
+        // Print board showing fill index per cell (-1 = unclaimed/obstruction)
+        std::cout << "Fill Index Board:" << std::endl;
+        printBoard(cellsToFill);
+        std::cout << std::endl;
+
+        // Print all gap cells grouped by fill index
+        std::cout << "Gap cells by fill index:" << std::endl;
+        for (size_t fillIdx = 0; fillIdx < fills.size(); ++fillIdx) {
+            const auto& ggs = fills[fillIdx].getGapGroups();
+            if (ggs.empty()) continue;
+            std::cout << "  Fill " << fillIdx
+                      << " (dominant=" << fills[fillIdx].getDominantPlayer() << "):" << std::endl;
+            for (size_t gi = 0; gi < ggs.size(); ++gi) {
+                std::cout << "    group " << gi << ": ";
+                for (const auto& cell : ggs[gi]) {
+                    std::cout << "(" << cell.first << "," << cell.second << ") ";
+                }
+                std::cout << std::endl;
+            }
+        }
+        std::cout << std::endl;
 
     result.fills = std::move(fills);
     result.gaps = std::move(allGaps);
@@ -2105,8 +2385,19 @@ FillResult updateFill(
     size_t numPlayers,
     const std::vector<size_t>& dsuGroupBounds,
     const std::vector<std::vector<size_t>>* WalkableTerrainBoard,
-    const std::vector<bool>* defeatedPlayers)
+    const std::vector<bool>* defeatedPlayers,
+    const std::string& stepLabel)
 {
+    // Debug step visualiser: every updateFill call dumps into its own numbered subfolder
+    // output/updateFillSteps/<seq>_<label>_<mod>_<fast|slow>/ so calls never overwrite each other.
+    const Config& ufConfig = AppConfig::get();
+    static int s_updateFillSeq = 0;
+    const bool dumpUF = ufConfig.dumpUpdateFillSteps;
+    const std::string ufDir = dumpUF
+        ? ("updateFillSteps/" + std::to_string(s_updateFillSeq++) + "_" + stepLabel + "_" + mod
+           + "_" + (isFastPath ? "fast" : "slow"))
+        : std::string();
+
     if (!isFastPath) {
         // Slow path: reprocess only fills that overlap the DSU group bounds.
         // The DSU group bounds cover the bounding box of all buildings in the
@@ -2133,6 +2424,9 @@ FillResult updateFill(
         // Step 2: Dilate obstruction and terrain boundaries (mirrors initialiseFill step 1).
         std::vector<std::vector<bool>> dilatedWalls =
             dilateObstructionsAndTerrain(obstrBoard, WalkableTerrainBoard, width, height);
+
+        if (dumpUF) renderFillStep("1_incoming", width, height, masterObstructionBoard,
+                                   WalkableTerrainBoard, &dilatedWalls, &fills, nullptr, true, ufDir);
 
         // Step 3: Clamp the DSU group bounds to the valid map range.
         const int regionMinX = static_cast<int>(std::min(dsuGroupBounds[0],
@@ -2204,6 +2498,9 @@ FillResult updateFill(
             fills = std::move(remaining);
         }
 
+        if (dumpUF) renderFillStep("2_region_cleared", width, height, masterObstructionBoard,
+                                   WalkableTerrainBoard, &dilatedWalls, &fills, nullptr, true, ufDir);
+
         // Step 7: Build visited board from the updated fillAssignmentBoard.
         // Cells that already belong to surviving fills are marked visited so that
         // the new flood fills do not expand into unchanged territory.
@@ -2233,6 +2530,9 @@ FillResult updateFill(
             }
         }
 
+        if (dumpUF) renderFillStep("3_after_reflood", width, height, masterObstructionBoard,
+                                   WalkableTerrainBoard, &dilatedWalls, &fills, nullptr, true, ufDir);
+
         // Step 9: Run the same post-fill pipeline as initialiseFill (steps 3b–5).
         // fillConnectedGapSets is safe to call on the whole fills vector because
         // connectedGapSets_ is empty on surviving fills (already consumed earlier).
@@ -2240,7 +2540,12 @@ FillResult updateFill(
                              WalkableTerrainBoard, width, height);
         mergeFills(fills, fillAssignmentBoard, playerObstructionBoards,  obstrBoard,
                    WalkableTerrainBoard, dilatedWalls, width, height, numPlayers);
-        removeShapesByGapThreshold(fills);
+        if (dumpUF) renderFillStep("4_after_merge", width, height, masterObstructionBoard,
+                                   WalkableTerrainBoard, &dilatedWalls, &fills, nullptr, true, ufDir);
+
+        removeShapesByGapThreshold(fills, fillAssignmentBoard);
+        if (dumpUF) renderFillStep("5_after_threshold", width, height, masterObstructionBoard,
+                                   WalkableTerrainBoard, &dilatedWalls, &fills, nullptr, true, ufDir);
 
         // Step 10: Encode fills and gaps for output.
         FillResult result;
@@ -2252,118 +2557,160 @@ FillResult updateFill(
         return result;
     }
 
-    // Fast path: topology cannot change near an isolated footprint.
-    // "add":    footprint cells become obstructions; evict them from any fill they belonged to.
-    // "remove": freed cells stay unclaimed — no fill boundary nearby to absorb them.
-    //           However, removing the building's influence can shift territory bitmask values
-    //           for cells already in nearby fills.  Those fills have no footprint cells to evict,
-    //           but still need their per-player counts refreshed via the influence-area delta pass.
+    // Fast path: topology cannot change near an isolated footprint, so we update fill
+    // membership and per-player counts locally. If that shifts any fill's dominant player,
+    // we rebuild the ownership-derived state (groups, external-gap thresholds, encoding) via
+    // the post-flood tail — reusing the EXISTING fills, with NO re-flood. Closure is purely
+    // geometric, so it stays valid through an owner change (mergeFills recomputes it harmlessly).
+    const int width  = static_cast<int>(masterObstructionBoard.size());
+    const int height = width > 0 ? static_cast<int>(masterObstructionBoard[0].size()) : 0;
+    const int boardW = static_cast<int>(fillAssignmentBoard.size());
+    const int boardH = boardW > 0 ? static_cast<int>(fillAssignmentBoard[0].size()) : 0;
+
+    if (dumpUF) renderFillStep("1_incoming", width, height, masterObstructionBoard,
+                               WalkableTerrainBoard, nullptr, &fills, nullptr, true, ufDir);
+
+    // Influence bbox: the only region where territory values (hence fill counts) can change.
+    const int iinfX    = static_cast<int>((footprintX > influenceExtent) ? footprintX - influenceExtent : 0);
+    const int iinfY    = static_cast<int>((footprintY > influenceExtent) ? footprintY - influenceExtent : 0);
+    const int iinfXEnd = static_cast<int>(footprintX + footprintW + influenceExtent);
+    const int iinfYEnd = static_cast<int>(footprintY + footprintH + influenceExtent);
+    const auto overlapsInfluence = [&](const Fill& f) {
+        const auto& b = f.getBounds(); // {minX, maxX, minY, maxY}
+        return !(b[1] < iinfX || b[0] > iinfXEnd || b[3] < iinfY || b[2] > iinfYEnd);
+    };
+
+    // Snapshot the dominant of every influence-bbox fill BEFORE the update, to detect flips.
+    std::vector<std::pair<size_t, size_t>> preDominant; // (fillIndex, dominant)
+    for (size_t i = 0; i < fills.size(); ++i) {
+        if (overlapsInfluence(fills[i])) {
+            preDominant.emplace_back(i, fills[i].getDominantPlayer());
+        }
+    }
+
     if (mod == "add") {
-        const int boardW = static_cast<int>(fillAssignmentBoard.size());
-        std::unordered_set<int> touchedFillIndices;
-        for (size_t cx = footprintX; cx < footprintX + footprintW; ++cx) {
-            if (static_cast<int>(cx) >= boardW) break;
-            const int boardH = static_cast<int>(fillAssignmentBoard[cx].size());
-            for (size_t cy = footprintY; cy < footprintY + footprintH; ++cy) {
-                if (static_cast<int>(cy) >= boardH) break;
-                const int idx = fillAssignmentBoard[cx][cy];
-                if (idx >= 0) {
-                    touchedFillIndices.insert(idx);
-                    fillAssignmentBoard[cx][cy] = -1;
-                }
+        // Footprint cells become obstruction: drop them from their fill and clear encoding.
+        for (size_t cx = footprintX; cx < footprintX + footprintW && static_cast<int>(cx) < boardW; ++cx) {
+            const int bH = static_cast<int>(fillAssignmentBoard[cx].size());
+            for (size_t cy = footprintY; cy < footprintY + footprintH && static_cast<int>(cy) < bH; ++cy) {
+                fillAssignmentBoard[cx][cy] = -1;
                 fillBoard[cx][cy] = 0;
             }
         }
-        for (const int idx : touchedFillIndices) {
-            if (idx >= static_cast<int>(fills.size())) continue;
-            fills[static_cast<size_t>(idx)].evictCellsInFootprint(
-                footprintX, footprintY, footprintW, footprintH,
-                influenceExtent, plLocalTerritories);
+        // Widened count update: EVERY fill overlapping the influence bbox, not just footprint-
+        // touchers — the isolated building's influence bleeds beyond its footprint. One
+        // evictCellsInFootprint call per overlapping fill both removes footprint cells (touchers)
+        // and delta-updates influence-area counts (the rest).
+        for (size_t i = 0; i < fills.size(); ++i) {
+            if (!overlapsInfluence(fills[i])) continue;
+            fills[i].evictCellsInFootprint(footprintX, footprintY, footprintW, footprintH,
+                                           influenceExtent, plLocalTerritories);
         }
     } else {
         // "remove" fast path:
-        // (a) Fills overlapping the influence bbox may have cells whose territory bitmask
-        //     values changed now that the building's influence is gone.  Apply the delta.
-        // (b) The freed footprint cells now have territory values and must be registered
-        //     into the single fill that surrounded the footprint (if any).
-        const int boardW = static_cast<int>(fillAssignmentBoard.size());
-        const int boardH = boardW > 0 ? static_cast<int>(fillAssignmentBoard[0].size()) : 0;
-
-        // (a) Influence-area delta pass.
-        const int iinfX    = static_cast<int>(
-            (footprintX > influenceExtent) ? footprintX - influenceExtent : 0);
-        const int iinfY    = static_cast<int>(
-            (footprintY > influenceExtent) ? footprintY - influenceExtent : 0);
-        const int iinfXEnd = static_cast<int>(footprintX + footprintW + influenceExtent);
-        const int iinfYEnd = static_cast<int>(footprintY + footprintH + influenceExtent);
+        // (a) Influence-area delta pass over overlapping fills (their bitmask values changed
+        //     now that the building's influence is gone).
         for (size_t i = 0; i < fills.size(); ++i) {
-            const auto& b = fills[i].getBounds(); // {minX, maxX, minY, maxY}
-            if (b[1] < iinfX || b[0] > iinfXEnd ||
-                b[3] < iinfY || b[2] > iinfYEnd) continue;
-            fills[i].evictCellsInFootprint(
-                footprintX, footprintY, footprintW, footprintH,
-                influenceExtent, plLocalTerritories);
+            if (!overlapsInfluence(fills[i])) continue;
+            fills[i].evictCellsInFootprint(footprintX, footprintY, footprintW, footprintH,
+                                           influenceExtent, plLocalTerritories);
         }
 
-        // (b) Find the fill surrounding the footprint by scanning its Chebyshev-1 ring.
+        // (b) Register the freed footprint cells into the fill that surrounds them, found by
+        //     scanning the Chebyshev-1 ring.
         const int fpX  = static_cast<int>(footprintX);
         const int fpY  = static_cast<int>(footprintY);
         const int fpXE = static_cast<int>(footprintX + footprintW);
         const int fpYE = static_cast<int>(footprintY + footprintH);
         int surroundingFillIdx = -1;
 
-        // Top and bottom rows of the ring.
         for (int cx = std::max(0, fpX - 1); cx <= std::min(boardW - 1, fpXE) && surroundingFillIdx < 0; ++cx) {
-            if (fpY - 1 >= 0) {
-                const int idx = fillAssignmentBoard[cx][fpY - 1];
-                if (idx >= 0) surroundingFillIdx = idx;
-            }
-            if (surroundingFillIdx < 0 && fpYE < boardH) {
-                const int idx = fillAssignmentBoard[cx][fpYE];
-                if (idx >= 0) surroundingFillIdx = idx;
-            }
+            if (fpY - 1 >= 0 && fillAssignmentBoard[cx][fpY - 1] >= 0) surroundingFillIdx = fillAssignmentBoard[cx][fpY - 1];
+            if (surroundingFillIdx < 0 && fpYE < boardH && fillAssignmentBoard[cx][fpYE] >= 0) surroundingFillIdx = fillAssignmentBoard[cx][fpYE];
         }
-        // Left and right columns of the ring.
         for (int cy = std::max(0, fpY - 1); cy <= std::min(boardH - 1, fpYE) && surroundingFillIdx < 0; ++cy) {
-            if (fpX - 1 >= 0) {
-                const int idx = fillAssignmentBoard[fpX - 1][cy];
-                if (idx >= 0) surroundingFillIdx = idx;
-            }
-            if (surroundingFillIdx < 0 && fpXE < boardW) {
-                const int idx = fillAssignmentBoard[fpXE][cy];
-                if (idx >= 0) surroundingFillIdx = idx;
-            }
+            if (fpX - 1 >= 0 && fillAssignmentBoard[fpX - 1][cy] >= 0) surroundingFillIdx = fillAssignmentBoard[fpX - 1][cy];
+            if (surroundingFillIdx < 0 && fpXE < boardW && fillAssignmentBoard[fpXE][cy] >= 0) surroundingFillIdx = fillAssignmentBoard[fpXE][cy];
         }
 
         if (surroundingFillIdx >= 0 && surroundingFillIdx < static_cast<int>(fills.size())) {
             Fill& sf = fills[static_cast<size_t>(surroundingFillIdx)];
             const int plW = static_cast<int>(plLocalTerritories.size());
-            for (size_t cx = footprintX; cx < footprintX + footprintW; ++cx) {
-                if (static_cast<int>(cx) >= boardW) break;
-                const int plH = static_cast<int>(cx) < plW
-                    ? static_cast<int>(plLocalTerritories[cx].size()) : 0;
+            for (size_t cx = footprintX; cx < footprintX + footprintW && static_cast<int>(cx) < boardW; ++cx) {
+                const int plH = static_cast<int>(cx) < plW ? static_cast<int>(plLocalTerritories[cx].size()) : 0;
                 const int bH = static_cast<int>(fillAssignmentBoard[cx].size());
-                for (size_t cy = footprintY; cy < footprintY + footprintH; ++cy) {
-                    if (static_cast<int>(cy) >= bH) break;
+                for (size_t cy = footprintY; cy < footprintY + footprintH && static_cast<int>(cy) < bH; ++cy) {
                     const double val = (static_cast<int>(cx) < plW && static_cast<int>(cy) < plH)
                         ? plLocalTerritories[cx][cy] : 0.0;
                     sf.registerCell(cx, cy, val);
                     fillAssignmentBoard[cx][cy] = surroundingFillIdx;
                 }
             }
-            // Encode fillBoard for the freed cells based on the fill's updated dominant player.
-            const size_t dp = sf.getDominantPlayer();
-            const size_t encoded = (dp > 0) ? (static_cast<size_t>(1) << (dp - 1)) : 0;
-            for (size_t cx = footprintX; cx < footprintX + footprintW; ++cx) {
-                if (static_cast<int>(cx) >= boardW) break;
-                const int bH = static_cast<int>(fillBoard[cx].size());
-                for (size_t cy = footprintY; cy < footprintY + footprintH; ++cy) {
-                    if (static_cast<int>(cy) >= bH) break;
-                    fillBoard[cx][cy] = encoded;
+        }
+    }
+
+    // Did the update flip any influence-bbox fill's dominant player?
+    bool anyFlip = false;
+    for (const auto& [idx, oldDom] : preDominant) {
+        if (idx < fills.size() && fills[idx].getDominantPlayer() != oldDom) {
+            anyFlip = true;
+            std::cout << "[FAST-PATH FLIP] mod=" << mod << " fill " << idx
+                      << " dominant " << oldDom << " -> " << fills[idx].getDominantPlayer()
+                      << "; running global-tail rebuild (no re-flood)" << std::endl;
+            break;
+        }
+    }
+
+    if (anyFlip) {
+        // Ownership changed: rebuild groups, external-gap thresholds, and encoding from the
+        // existing fills (steps 3b–7 of initialiseFill), with NO re-flood. The footprint
+        // state updates above already adjusted membership/counts; this only redoes the
+        // ownership-derived layers.
+        std::vector<std::vector<bool>> obstrBoard(width, std::vector<bool>(height, false));
+        for (int x = 0; x < width; ++x)
+            for (int y = 0; y < height; ++y)
+                obstrBoard[x][y] = (masterObstructionBoard[x][y] != -1);
+        std::vector<std::vector<bool>> dilatedWalls =
+            dilateObstructionsAndTerrain(obstrBoard, WalkableTerrainBoard, width, height);
+
+        fillConnectedGapSets(fills, fillAssignmentBoard, plLocalTerritories,
+                             WalkableTerrainBoard, width, height);
+        mergeFills(fills, fillAssignmentBoard, playerObstructionBoards, obstrBoard,
+                   WalkableTerrainBoard, dilatedWalls, width, height, numPlayers);
+        removeShapesByGapThreshold(fills, fillAssignmentBoard);
+
+        if (dumpUF) renderFillStep("2_after_global_tail", width, height, masterObstructionBoard,
+                                   WalkableTerrainBoard, &dilatedWalls, &fills, nullptr, true, ufDir);
+
+        FillResult result;
+        std::vector<std::vector<Position>> allGaps =
+            encodeFillsAndGapsForOutput(fills, numPlayers, width, height, result);
+        result.fills               = std::move(fills);
+        result.gaps                = std::move(allGaps);
+        result.fillAssignmentBoard = std::move(fillAssignmentBoard);
+        return result;
+    }
+
+    // No flip: cheap encoding of just the footprint cells.
+    //   add    — already zeroed (now obstruction); other cells keep their (still-valid) owner.
+    //   remove — freed cells take their surrounding fill's unchanged dominant.
+    if (mod == "remove") {
+        for (size_t cx = footprintX; cx < footprintX + footprintW && static_cast<int>(cx) < boardW; ++cx) {
+            const int bH = static_cast<int>(fillBoard[cx].size());
+            for (size_t cy = footprintY; cy < footprintY + footprintH && static_cast<int>(cy) < bH; ++cy) {
+                const int idx = fillAssignmentBoard[cx][cy];
+                size_t encoded = 0;
+                if (idx >= 0 && idx < static_cast<int>(fills.size())) {
+                    const size_t dp = fills[static_cast<size_t>(idx)].getDominantPlayer();
+                    encoded = (dp > 0) ? (static_cast<size_t>(1) << (dp - 1)) : 0;
                 }
+                fillBoard[cx][cy] = encoded;
             }
         }
     }
+
+    if (dumpUF) renderFillStep("2_after_cheap_encode", width, height, masterObstructionBoard,
+                               WalkableTerrainBoard, nullptr, &fills, nullptr, true, ufDir);
 
     FillResult result;
     result.fills               = std::move(fills);
@@ -2371,4 +2718,87 @@ FillResult updateFill(
     result.fillBoard           = std::move(fillBoard);
     result.fillAssignmentBoard = std::move(fillAssignmentBoard);
     return result;
+}
+
+// ---------- validateAgainstFullRecompute ----------
+
+bool validateAgainstFullRecompute(
+    const FillResult& incremental,
+    const std::string& label,
+    const std::vector<std::vector<double>>& plLocalTerritories,
+    const std::vector<std::vector<int>>& masterObstructionBoard,
+    const std::vector<std::vector<std::vector<bool>>>& playerObstructionBoards,
+    size_t numPlayers,
+    const std::vector<std::vector<size_t>>* WalkableTerrainBoard,
+    const std::vector<bool>* defeatedPlayers)
+{
+    // Ground truth: a from-scratch fill on the same post-update board state.
+    const FillResult fresh = initialiseFill(
+        plLocalTerritories, masterObstructionBoard, playerObstructionBoards,
+        numPlayers, WalkableTerrainBoard, defeatedPlayers);
+
+    const auto& incBoard = incremental.fillBoard;
+    const auto& freshBoard = fresh.fillBoard;
+
+    // --- 1. fillBoard ownership diff (per cell, order-independent) ---
+    size_t fillBoardMismatches = 0;
+    int reportsLogged = 0;
+    const size_t W = std::min(incBoard.size(), freshBoard.size());
+    if (incBoard.size() != freshBoard.size()) {
+        std::cout << "[VALIDATE " << label << "] fillBoard width differs: incremental "
+                  << incBoard.size() << " vs fresh " << freshBoard.size() << std::endl;
+    }
+    for (size_t x = 0; x < W; ++x) {
+        const size_t H = std::min(incBoard[x].size(), freshBoard[x].size());
+        for (size_t y = 0; y < H; ++y) {
+            if (incBoard[x][y] != freshBoard[x][y]) {
+                ++fillBoardMismatches;
+                if (reportsLogged < 15) {
+                    std::cout << "[VALIDATE " << label << "] fillBoard (" << x << "," << y
+                              << ") incremental=" << incBoard[x][y]
+                              << " fresh=" << freshBoard[x][y] << std::endl;
+                    ++reportsLogged;
+                }
+            }
+        }
+    }
+
+    // --- 2. gap-cell set diff (per player, order-independent) ---
+    size_t gapMismatches = 0;
+    int gapReportsLogged = 0;
+    const size_t P = std::max(incremental.gaps.size(), fresh.gaps.size());
+    for (size_t p = 0; p < P; ++p) {
+        std::set<Position> incSet, freshSet;
+        if (p < incremental.gaps.size())
+            incSet.insert(incremental.gaps[p].begin(), incremental.gaps[p].end());
+        if (p < fresh.gaps.size())
+            freshSet.insert(fresh.gaps[p].begin(), fresh.gaps[p].end());
+
+        for (const auto& cell : freshSet) {
+            if (!incSet.count(cell)) {
+                ++gapMismatches;
+                if (gapReportsLogged < 15) {
+                    std::cout << "[VALIDATE " << label << "] gap MISSING from incremental: player "
+                              << p << " cell (" << cell.first << "," << cell.second << ")" << std::endl;
+                    ++gapReportsLogged;
+                }
+            }
+        }
+        for (const auto& cell : incSet) {
+            if (!freshSet.count(cell)) {
+                ++gapMismatches;
+                if (gapReportsLogged < 15) {
+                    std::cout << "[VALIDATE " << label << "] gap EXTRA in incremental: player "
+                              << p << " cell (" << cell.first << "," << cell.second << ")" << std::endl;
+                    ++gapReportsLogged;
+                }
+            }
+        }
+    }
+
+    const bool ok = (fillBoardMismatches == 0 && gapMismatches == 0);
+    std::cout << "[VALIDATE " << label << "] " << (ok ? "OK" : "*** MISMATCH ***")
+              << " — fillBoard diffs: " << fillBoardMismatches
+              << ", gap-cell diffs: " << gapMismatches << std::endl;
+    return ok;
 }

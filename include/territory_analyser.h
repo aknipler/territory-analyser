@@ -127,7 +127,7 @@ class TerritoryAnalyser {
         std::vector<std::vector<size_t>> WalkableTerrainBoard;
         size_t numPlayers, numTeams;
         std::unordered_map<std::string, BuildingInfo> buildingsDict;
-        std::vector<std::string> militaryBuildings;
+        std::vector<std::string> combativeBuildings;
         size_t nextBuildingInstanceId = 1;
         std::unordered_map<size_t, PlayerObject> buildingInstancesById;
         std::unordered_map<BuildingInstanceKey, std::vector<size_t>, BuildingInstanceKeyHash, BuildingInstanceKeyEq> buildingInstanceIdsByKey;

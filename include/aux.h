@@ -8,6 +8,9 @@
 #include <unordered_map>
 #include <regex>
 #include <functional>
+#include <chrono>
+#include <iomanip>
+#include <vector>
 
 struct Config;
 struct BuildingInfo;

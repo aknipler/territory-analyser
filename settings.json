@@ -5,10 +5,13 @@
 
   "testingMode": false,
   "forceRadialInfluenceForAllBuildings": false,
+  "validateIncrementalFills": true,
+  "dumpInitialiseFillSteps": true,
+  "dumpUpdateFillSteps": true,
   
   "numberOfPlayers": 6,
   "numberOfTeams": 2,
-  "mapSize": 220,
+  "mapSize": 168,
   "teamAssignments": [
     [1, 1],
     [2, 2],
@@ -23,8 +26,8 @@
   "contestedTerritoryColour": [150, 150, 150, 255],
   "rawTerritoryOwnershipThreshold": 3,
   "CLOSED_SHAPE_GAPS_THRESHOLD": 2,
-  "ownershipThreshold": 0.70,
-  "isWalledMultiplier": 4.0,
+  "ownershipThreshold": 0.40,
+  "isWalledMultiplier": 2.5,
   "contestedOwnershipThreshold": 0.6,
   "nonWalkableTerrainBuildings": ["Dock", "Harbour"],
   

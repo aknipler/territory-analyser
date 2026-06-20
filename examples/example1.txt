@@ -123,10 +123,10 @@ analyser.updateBuilding(19,42,"House",4, "add");
 analyser.updateBuilding(17,42,"House",4, "add");
 analyser.updateBuilding(15,40,"House",4, "add");
 analyser.updateBuilding(14,38,"House",4, "add");
-analyser.updateBuilding(13,36,"House",4, "add");
+analyser.updateBuilding(12,37,"House",4, "add");
 analyser.updateBuilding(13,34,"Barracks",4, "add");
 
 analyser.updateBuilding(19,39,"House",4, "add");
 
 # filling test
-analyser.updateBuilding(27,30, "House", 3, "add");
+analyser.updateBuilding(27,26, "House", 3, "add");
