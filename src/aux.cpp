@@ -94,15 +94,15 @@ Config loadConfig(const std::string& givenConfigPath) {
     return config;
 }
 
-// ---------- loadBuildingCommandsFromFile ----------
+// ---------- loadObstructionCommandsFromFile ----------
 
 /**
- * @brief Reads a text file of analyser.updateBuilding(...) commands (one per line), parses each
- *        with a regex, and calls updateBuilding on analyser.  Lines beginning with '#' and blank
+ * @brief Reads a text file of analyser.updateObstruction(...) commands (one per line), parses each
+ *        with a regex, and calls updateObstruction on analyser.  Lines beginning with '#' and blank
  *        lines are skipped.
  * @return false on file-open failure or any malformed line.
  */
-bool loadBuildingCommandsFromFile(TerritoryAnalyser& analyser, const std::string& commandsPath) {
+bool loadObstructionCommandsFromFile(TerritoryAnalyser& analyser, const std::string& commandsPath) {
     std::ifstream file(commandsPath);
     std::string usedPath = commandsPath;
 
@@ -118,7 +118,7 @@ bool loadBuildingCommandsFromFile(TerritoryAnalyser& analyser, const std::string
     }
 
     const std::regex commandPattern(
-        R"(^\s*analyser\.updateBuilding\(\s*(\d+)\s*,\s*(\d+)\s*,\s*\"([^\"]+)\"\s*,\s*(-?\d+)\s*,\s*\"([^\"]+)\"\s*\)\s*;\s*$)");
+        R"(^\s*analyser\.updateObstruction\(\s*(\d+)\s*,\s*(\d+)\s*,\s*\"([^\"]+)\"\s*,\s*(-?\d+)\s*,\s*\"([^\"]+)\"\s*\)\s*;\s*$)");
 
     std::string line;
     int lineNumber = 0;
@@ -136,7 +136,7 @@ bool loadBuildingCommandsFromFile(TerritoryAnalyser& analyser, const std::string
             return false;
         }
 
-        analyser.updateBuildingState(
+        analyser.updateObstructionState(
             static_cast<size_t>(std::stoul(match[1].str())),
             static_cast<size_t>(std::stoul(match[2].str())),
             match[3].str(),
@@ -368,3 +368,92 @@ bool outputForTests(const TerritoryAnalyser& analyser, const Config& config, con
     return wrote;
 }
 
+
+
+
+cv::Mat applyTAmatToCAoutput(const cv::Mat& caOutput, const cv::Mat& taMat)
+{
+    // Nothing to blend (e.g. the CA minimap failed to load — a relative imread that doesn't resolve
+    // from the run cwd, or simply absent under a non-AAA example). Fall back to whichever input is
+    // non-empty so the caller gets a writable image: cv::imwrite asserts (SIGABRT) on an empty Mat.
+    if (caOutput.empty() || taMat.empty()) {
+        if (!caOutput.empty()) return caOutput.clone();
+        return taMat.clone(); // may still be empty if both are; caller guards below
+    }
+
+    const int rows = caOutput.rows;
+    const int cols = caOutput.cols;
+    cv::Mat taMatResized;
+
+    // Rotate TA matrix 45 degrees to align with CA orientation
+        double angle = -45.0; 
+        cv::Point2f center((taMat.cols - 1) / 2.0, (taMat.rows - 1) / 2.0);
+        cv::Mat rot = cv::getRotationMatrix2D(center, angle, 1.0);
+
+        // Step 1: Determine the size of the new bounding rectangle
+        cv::Rect2f bbox = cv::RotatedRect(cv::Point2f(), taMat.size(), angle).boundingRect2f();
+
+        // Step 2: Adjust the transformation matrix translation to fit the new center
+        rot.at<double>(0, 2) += bbox.width / 2.0 - taMat.cols / 2.0;
+        rot.at<double>(1, 2) += bbox.height / 2.0 - taMat.rows / 2.0;
+
+        // Step 3: Warp using the expanded canvas size
+        cv::Mat taMatRotated;
+        cv::warpAffine(taMat, taMatRotated, rot, bbox.size(), cv::INTER_CUBIC, cv::BORDER_CONSTANT, cv::Scalar(0, 0, 0, 0));
+    // 
+
+    if (caOutput.size() != taMatRotated.size()) {
+        cv::resize(taMatRotated, taMatResized, caOutput.size(), 0, 0, cv::INTER_CUBIC);
+    } else {
+        taMatResized = taMatRotated;
+    }
+
+    // Create a mask to hold the TA matrix values
+    cv::Mat mask, alphaBlend, alphaChannel, alphaChannelFloat, maskFloat;
+    alphaChannel.create(taMatResized.size(), CV_8UC1);
+
+    // Define lower and upper bounds for your specific threshold range
+    cv::Scalar lowerBound(35, 90, 40); // dark green, BGR
+    cv::Scalar upperBound(121, 190, 115); // light green
+
+    // Create a mask on the CA image
+    cv::inRange(caOutput, lowerBound, upperBound, mask);
+    mask.convertTo(maskFloat, CV_32F, 1.0 / 255.0);
+
+    // Get the blend from the TA output i.e. setup alphaBlend
+    cv::extractChannel(taMatResized, alphaChannel, 3);
+    alphaChannel.convertTo(alphaChannelFloat, CV_32F, 1.0 / 255.0);
+    cv::imwrite("output/alphaChannel.png", alphaChannel);
+    cv::multiply(maskFloat, alphaChannelFloat, alphaBlend);
+    cv::imwrite("output/alphaBlend.png", alphaBlend);
+
+    cv::Mat alphaBlend3ch;
+    cv::Mat in[] = { alphaBlend, alphaBlend, alphaBlend };
+    cv::merge(in, 3, alphaBlend3ch);
+
+    // Create 3 channel version of TA image
+    std::vector<cv::Mat> bgraChannels;
+    cv::split(taMatResized, bgraChannels);
+    cv::Mat foregroundBGR;
+    std::vector<cv::Mat> bgrChannels = { bgraChannels[0], bgraChannels[1], bgraChannels[2] };
+    cv::merge(bgrChannels, foregroundBGR);
+
+    // Combine CA and TA, make float
+    cv::Mat fgFloat, bgFloat, dbg, dbg2;
+    foregroundBGR.convertTo(fgFloat, CV_32FC3);
+    cv::imwrite("output/fgBGR.png", foregroundBGR);
+    caOutput.convertTo(bgFloat, CV_32FC3);
+
+    // dbg
+    dbg = (fgFloat.mul(alphaBlend3ch));
+    dbg.convertTo(dbg,CV_8UC3);
+    cv::imwrite("output/fgFloatBlended.png", dbg);
+    dbg2 = (bgFloat.mul(cv::Scalar::all(1.0) - alphaBlend3ch));
+    dbg2.convertTo(dbg2, CV_8UC3);
+    cv::imwrite("output/bgFloatBlended.png", dbg2);
+
+    cv::Mat result = fgFloat.mul(alphaBlend3ch) + bgFloat.mul(cv::Scalar::all(1.0) - alphaBlend3ch);
+    result.convertTo(result, CV_8UC3);
+
+    return result;
+}

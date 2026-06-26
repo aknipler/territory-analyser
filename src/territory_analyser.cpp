@@ -13,7 +13,7 @@
 
 /**
  * @brief Initialises all boards and grids for givenSize x givenSize maps with numPlayers players and
- *        numTeams teams.  Loads the buildings dictionary and initial state from JSON/command files,
+ *        numTeams teams.  Loads the obstructions dictionary and initial state from JSON/command files,
  *        runs a full territory merge, and seeds both player and team fill analyses.
  */
 // Constructor to initialize the dynamic 2D array
@@ -45,7 +45,7 @@ TerritoryAnalyser::TerritoryAnalyser(size_t givenSize, size_t numPlayers, size_t
                           std::vector<std::vector<size_t>>(givenSize, std::vector<size_t>(givenSize, 0))),
     WalkableTerrainBoard(givenSize, std::vector<size_t>(givenSize, 0)),
 
-    buildingsDict(), rangedBuildings(), 
+    obstructionsDict(), rangedObstructions(), 
     isPlayerDefeated(numPlayers + 1, false)
                           {
 
@@ -57,7 +57,9 @@ TerritoryAnalyser::TerritoryAnalyser(size_t givenSize, size_t numPlayers, size_t
 
 
     // initialise nonwalkable terrain
-    initWalkableTerrain();
+    measureAndLogExecutionTime<int>("initialise walkable terrain)", 
+        std::function<int()>([this]() { this->initWalkableTerrain(); return 0; } )
+    );
 
 
 
@@ -65,31 +67,43 @@ TerritoryAnalyser::TerritoryAnalyser(size_t givenSize, size_t numPlayers, size_t
         std::cerr << "Error: teamAssignments size must match numPlayers." << std::endl;
         exit(1);
     }
-    // Load buildingsDict and rangedBuildings from JSON file
-    loadBuildingsDict("buildingsDict.json");
+    // Load obstructionsDict and rangedObstructions from JSON file
+    measureAndLogExecutionTime<int>("load obstructions dict", 
+        std::function<int()>([this]() { this->loadObstructionsDict("obstructionsDict.json"); return 0; } )
+    );
 
     // Setup the initial state of the map (can change this to integrate with your system)
-    if (!loadBuildingCommandsFromFile(*this, initialStatePath)) {
-        std::cerr << "Error: Failed to load building commands from file: " << initialStatePath << std::endl;
-        std::cout << "Please ensure the file exists and is properly formatted." << std::endl;
-        exit(1);
-    }
+    // This should be replaced by batchAddObstructions() when it is ready. Current implementation is incredibly slow.
+    measureAndLogExecutionTime<int>("load obstruction commands from file", 
+        std::function<int()>([this, initialStatePath]() { loadObstructionCommandsFromFile(*this, initialStatePath); return 0; } )
+    );
 
-    mapMergedTerritories();
+    // if (!loadObstructionCommandsFromFile(*this, initialStatePath)) {
+    //     std::cerr << "Error: Failed to load obstruction commands from file: " << initialStatePath << std::endl;
+    //     std::cout << "Please ensure the file exists and is properly formatted." << std::endl;
+    //     exit(1);
+    // }
 
+    measureAndLogExecutionTime<int>("mapMergedTerritories", 
+        std::function<int()>([this]() { this->mapMergedTerritories(); return 0; } )
+    );
+
+    
     auto fillResultPlayers = initialiseFill(getMasterBoard("player"), masterPlayerObstructionBoard, 
                                     playerObstructionBoards, numPlayers, &WalkableTerrainBoard, &isPlayerDefeated);
     playerFills = fillResultPlayers.fills;
     playerGaps = fillResultPlayers.gaps;
     masterPlayerBoardFill = fillResultPlayers.fillBoard;
     playerFillAssignmentBoard = std::move(fillResultPlayers.fillAssignmentBoard);
+    playerInteriorGroups = std::move(fillResultPlayers.interiorGroups);
 
-    auto fillResultTeams = initialiseFill(getMasterBoard("team"), masterTeamObstructionBoard, 
+    auto fillResultTeams = initialiseFill(getMasterBoard("team"), masterTeamObstructionBoard,
                                     teamObstructionBoards, numTeams, &WalkableTerrainBoard);
     teamFills = fillResultTeams.fills;
     teamGaps = fillResultTeams.gaps;
     masterTeamBoardFill = fillResultTeams.fillBoard;
     teamFillAssignmentBoard = std::move(fillResultTeams.fillAssignmentBoard);
+    teamInteriorGroups = std::move(fillResultTeams.interiorGroups);
 }
 
 
@@ -111,9 +125,9 @@ void TerritoryAnalyser::initWalkableTerrain() {
     // '1' = walkable land, '0' = non-walkable water).
     std::vector<std::vector<size_t>> WalkableTerrain(size, std::vector<size_t>(size, 1));
 
-    std::ifstream waterFile("examples/AAAImageWater.txt");
+    std::ifstream waterFile("../examples/AAAImageWater.txt");
     if (!waterFile.is_open()) {
-        std::cerr << "Warning: Could not open examples/AAAImageWater.txt. Defaulting to all-walkable terrain." << std::endl;
+        std::cerr << "Warning: Could not open " << std::filesystem::current_path() << " + ../examples/AAAImageWater.txt" << ". Defaulting to all-walkable terrain." << std::endl;
     } else {
         std::string line;
         size_t row = 0;
@@ -132,13 +146,13 @@ void TerritoryAnalyser::initWalkableTerrain() {
 }
 
 
-// ---------- hasNearbyBuildings ----------
+// ---------- hasNearbyObstructions ----------
 
-// Returns true if any building obstruction exists within Chebyshev distance 2 of
+// Returns true if any obstruction exists within Chebyshev distance 2 of
 // the given footprint [x, x+width) x [y, y+height), excluding the footprint cells
 // themselves.
 //
-// Called after updateObstruction() so masterPlayerObstructionBoard reflects the
+// Called after updateObstructionBoards() so masterPlayerObstructionBoard reflects the
 // current game state. A non-empty ring means an incremental fill recomputation
 // (slow path) is needed; an empty ring means no existing fill shape can be split
 // or merged by this change (fast path: only footprint cells need evicting/restoring
@@ -147,9 +161,9 @@ void TerritoryAnalyser::initWalkableTerrain() {
 // x, y          - top-left corner of the footprint
 // width, height - dimensions of the footprint
 //
-// Returns: true = another building within 2 tiles (slow path needed);
+// Returns: true = another obstruction within 2 tiles (slow path needed);
 //          false = isolated footprint (fast path safe).
-bool TerritoryAnalyser::hasNearbyBuildings(size_t x, size_t y, size_t width, size_t height) const {
+bool TerritoryAnalyser::hasNearbyObstructions(size_t x, size_t y, size_t width, size_t height) const {
     const int fx = static_cast<int>(x),  fy = static_cast<int>(y);
     const int fw = static_cast<int>(width), fh = static_cast<int>(height);
     const int mapSize = static_cast<int>(size);
@@ -165,46 +179,46 @@ bool TerritoryAnalyser::hasNearbyBuildings(size_t x, size_t y, size_t width, siz
 }
 
 
-// ---------- updateBuilding ----------
+// ---------- updateObstructionState ----------
 
 /**
- * @brief Performs all territory/obstruction/DSU state updates for a building add/remove,
+ * @brief Performs all territory/obstruction/DSU state updates for a obstruction add/remove,
  *        but does NOT update fills.  Use this during initial state loading (before initialiseFill
  *        has been called).  Returns a result whose shouldProceed is false on early-return paths.
  */
-TerritoryAnalyser::BuildingStateResult TerritoryAnalyser::updateBuildingState(
-    size_t x, size_t y, const std::string& building, int player, const std::string& mod) {
+TerritoryAnalyser::ObstructionStateResult TerritoryAnalyser::updateObstructionState(
+    size_t x, size_t y, const std::string& obstruction, int player, const std::string& mod) {
 
-    BuildingInfo info;
+    ObstructionInfo info;
     int team = 0;
-    if (!lookupBuildingAndTeam(building, player, info, team)) return {};
+    if (!lookupObstructionAndTeam(obstruction, player, info, team)) return {};
 
-    // For defeated players removing non-ranged buildings: obstructions still update normally
+    // For defeated players removing non-ranged obstructions: obstructions still update normally
     // but territory is already cleared, so skip all territory-related work and return.
-    const bool isRangedBuilding = std::find(rangedBuildings.begin(), rangedBuildings.end(), building) != rangedBuildings.end();
+    const bool isRangedObstruction = std::find(rangedObstructions.begin(), rangedObstructions.end(), obstruction) != rangedObstructions.end();
     if (mod == "remove" && player > 0
         && static_cast<size_t>(player) < isPlayerDefeated.size()
         && isPlayerDefeated[static_cast<size_t>(player)]
-        && !isRangedBuilding) {
-        updateObstruction(x, y, info.width, info.height, player, team, mod);
+        && !isRangedObstruction) {
+        updateObstructionBoards(x, y, info.width, info.height, player, team, mod);
         return {};
     }
 
-    const PlayerObject buildingInstance = makeBuildingInstance(x, y, building, player, team, info);
-    const auto impactedBuildings = collectAttributedBuildingsInFootprint(x, y, info.width, info.height);
-    auto [impactedPlayers, impactedTeams] = collectImpactedOwners(player, team, impactedBuildings);
+    const PlayerObject obstructionInstance = makeObstructionInstance(x, y, obstruction, player, team, info);
+    const auto impactedObstructions = collectAttributedObstructionsInFootprint(x, y, info.width, info.height);
+    auto [impactedPlayers, impactedTeams] = collectImpactedOwners(player, team, impactedObstructions);
 
     // For "remove": capture DSU group bounds BEFORE performTerritoryUpdateWithDSUSync
     // calls removeFromConnectedObstructions (which erases the group data).
     // Default to the footprint bounds as a safe fallback.
     std::vector<size_t> dsuGroupBounds = {x, x + info.width - 1, y, y + info.height - 1};
     if (mod == "remove") {
-        const BuildingInstanceKey remKey{
+        const ObstructionInstanceKey remKey{
             static_cast<size_t>(player), static_cast<size_t>(team),
-            building, Position{x, y}
+            obstruction, Position{x, y}
         };
-        const auto remKeyIt = buildingInstanceIdsByKey.find(remKey);
-        if (remKeyIt != buildingInstanceIdsByKey.end() && !remKeyIt->second.empty()) {
+        const auto remKeyIt = obstructionInstanceIdsByKey.find(remKey);
+        if (remKeyIt != obstructionInstanceIdsByKey.end() && !remKeyIt->second.empty()) {
             const size_t remId = remKeyIt->second.back();
             if (dsuParent_.count(remId)) {
                 const size_t root = dsuFind(remId);
@@ -215,17 +229,17 @@ TerritoryAnalyser::BuildingStateResult TerritoryAnalyser::updateBuildingState(
         }
     }
 
-    auto bounds = performTerritoryUpdateWithDSUSync(buildingInstance, mod);
+    auto bounds = performTerritoryUpdateWithDSUSync(obstructionInstance, mod);
 
     // For "add": capture DSU group bounds AFTER performTerritoryUpdateWithDSUSync
     // calls addToConnectedObstructions (which creates/updates the group).
     if (mod == "add") {
-        const BuildingInstanceKey newKey{
+        const ObstructionInstanceKey newKey{
             static_cast<size_t>(player), static_cast<size_t>(team),
-            building, Position{x, y}
+            obstruction, Position{x, y}
         };
-        const auto newKeyIt = buildingInstanceIdsByKey.find(newKey);
-        if (newKeyIt != buildingInstanceIdsByKey.end() && !newKeyIt->second.empty()) {
+        const auto newKeyIt = obstructionInstanceIdsByKey.find(newKey);
+        if (newKeyIt != obstructionInstanceIdsByKey.end() && !newKeyIt->second.empty()) {
             const size_t newId = newKeyIt->second.back();
             if (dsuParent_.count(newId)) {
                 const size_t root = dsuFind(newId);
@@ -236,9 +250,9 @@ TerritoryAnalyser::BuildingStateResult TerritoryAnalyser::updateBuildingState(
         }
     }
 
-    updateObstruction(x, y, info.width, info.height, player, team, mod);
-    const bool isFastPath = !hasNearbyBuildings(x, y, info.width, info.height);
-    bounds = mergeBounds(bounds, reapplyAttributedBuildings(impactedBuildings));
+    updateObstructionBoards(x, y, info.width, info.height, player, team, mod);
+    const bool isFastPath = !hasNearbyObstructions(x, y, info.width, info.height);
+    bounds = mergeBounds(bounds, reapplyAttributedObstructions(impactedObstructions));
 
     refreshOwnerBoolPasses(impactedPlayers, impactedTeams, bounds);
     rebuildMasterBoards();
@@ -246,24 +260,93 @@ TerritoryAnalyser::BuildingStateResult TerritoryAnalyser::updateBuildingState(
     return {true, info, isFastPath, dsuGroupBounds};
 }
 
+
 /**
- * @brief Main entry point for adding or removing a building.  Delegates all state work to
- *        updateBuildingState, then triggers fill recomputation for all affected players/teams.
+ * @brief Performs all territory/obstruction/DSU state updates for a obstruction add/remove,
+ *        but does NOT update fills.  Use this during initial state loading (before initialiseFill
+ *        has been called).  Returns a result whose shouldProceed is false on early-return paths.
  */
-void TerritoryAnalyser::updateBuilding(size_t x, size_t y, std::string building, int player, std::string mod) {
-    auto result = updateBuildingState(x, y, building, player, mod);
+TerritoryAnalyser::ObstructionStateResult TerritoryAnalyser::batchAddObstructions(
+    std::string filePath) {
+
+
+    // Step 0: Read the file and hold it in memory
+
+    // Step 1: Loop through all obstructions, add them to the obstruction boards using something like 
+    // makeObstructionInstance and updateObstructionBoards?
+    // Finish loop.
+
+    // Step 2: Loop through all obstructions, add territory around them using performTerritoryUpdateWithDSUSync? 
+    // Or just update Territory?
+    // Finish loop.
+
+    // Step 3: Loop through all obstructions, update DSU connectivity? Could this be done in step 1 instead?
+
+    // Step 4: make boolean boards and master boards (refreshOwnerBoolPasses and rebuildMasterBoards)
+
+    ObstructionInfo info;
+    int team = 0;
+    // if (!lookupObstructionAndTeam(obstruction, player, info, team)) return {};
+    // const PlayerObject obstructionInstance = makeObstructionInstance(x, y, obstruction, player, team, info); // 1
+
+
+
+    // auto bounds = performTerritoryUpdateWithDSUSync(obstructionInstance, "add"); // 2
+
+
+
+    // For "add": capture DSU group bounds AFTER performTerritoryUpdateWithDSUSync
+    // calls addToConnectedObstructions (which creates/updates the group).
+    // std::vector<size_t> dsuGroupBounds = {x, x + info.width - 1, y, y + info.height - 1}; // 3
+    // // if (mod == "add") {
+    //     const ObstructionInstanceKey newKey{
+    //         static_cast<size_t>(player), static_cast<size_t>(team),
+    //         obstruction, Position{x, y}
+    //     };
+    //     const auto newKeyIt = obstructionInstanceIdsByKey.find(newKey);
+    //     if (newKeyIt != obstructionInstanceIdsByKey.end() && !newKeyIt->second.empty()) {
+    //         const size_t newId = newKeyIt->second.back();
+    //         if (dsuParent_.count(newId)) {
+    //             const size_t root = dsuFind(newId);
+    //             const auto groupIt = connectedGroupData_.find(root);
+    //             if (groupIt != connectedGroupData_.end() && groupIt->second.bounds.size() >= 4)
+    //                 dsuGroupBounds = groupIt->second.bounds;
+    //         }
+    //     }
+    // // }
+
+
+    // updateObstructionBoards(x, y, info.width, info.height, player, team, mod);
+
+
+    // std::unordered_set<size_t> players, teams;
+    // for (size_t i = 0; i < numPlayers; ++i) players.insert(i);
+    // for (size_t i = 0; i < numTeams; ++i) teams.insert(i);
+    // refreshOwnerBoolPasses(players, teams, bounds);
+    // rebuildMasterBoards();
+
+
+    // return {true, info, isFastPath, dsuGroupBounds};
+}
+
+/**
+ * @brief Main entry point for adding or removing an obstruction.  Delegates all state work to
+ *        updateObstructionState, then triggers fill recomputation for all affected players/teams.
+ */
+void TerritoryAnalyser::updateObstruction(size_t x, size_t y, std::string obstruction, int player, std::string mod) {
+    auto result = updateObstructionState(x, y, obstruction, player, mod);
     if (!result.shouldProceed) return;
     updatePlayerAndTeamFills(x, y, result.info, result.isFastPath, mod, result.dsuGroupBounds);
 }
 
-// ---------- lookupBuildingAndTeam ----------
+// ---------- lookupObstructionAndTeam ----------
 
-bool TerritoryAnalyser::lookupBuildingAndTeam(const std::string& building, int player, BuildingInfo& infoOut, int& teamOut) {
+bool TerritoryAnalyser::lookupObstructionAndTeam(const std::string& obstruction, int player, ObstructionInfo& infoOut, int& teamOut) {
     const auto& config = AppConfig::get();
     try {
-        infoOut = buildingsDict.at(building);
+        infoOut = obstructionsDict.at(obstruction);
     } catch (const std::out_of_range&) {
-        std::cerr << "Error: Building type '" << building << "' not found in buildingsDict." << std::endl;
+        std::cerr << "Error: Obstruction type '" << obstruction << "' not found in obstructionsDict." << std::endl;
         return false;
     }
     teamOut = 0;
@@ -278,34 +361,34 @@ bool TerritoryAnalyser::lookupBuildingAndTeam(const std::string& building, int p
     return true;
 }
 
-// ---------- makeBuildingInstance ----------
+// ---------- makeObstructionInstance ----------
 
-PlayerObject TerritoryAnalyser::makeBuildingInstance(size_t x, size_t y, const std::string& building, int player, int team, const BuildingInfo& info) const {
-    PlayerObject buildingInstance;
-    buildingInstance.instanceId = 0;
-    buildingInstance.player = static_cast<size_t>(player);
-    buildingInstance.team = static_cast<size_t>(team);
-    buildingInstance.building = building;
-    buildingInstance.info = info;
-    buildingInstance.position = Position{x, y};
-    buildingInstance.influenceMinY = 0;
-    buildingInstance.influenceMinX = 0;
-    return buildingInstance;
+PlayerObject TerritoryAnalyser::makeObstructionInstance(size_t x, size_t y, const std::string& obstruction, int player, int team, const ObstructionInfo& info) const {
+    PlayerObject obstructionInstance;
+    obstructionInstance.instanceId = 0;
+    obstructionInstance.player = static_cast<size_t>(player);
+    obstructionInstance.team = static_cast<size_t>(team);
+    obstructionInstance.obstruction = obstruction;
+    obstructionInstance.info = info;
+    obstructionInstance.position = Position{x, y};
+    obstructionInstance.influenceMinY = 0;
+    obstructionInstance.influenceMinX = 0;
+    return obstructionInstance;
 }
 
 // ---------- collectImpactedOwners ----------
 
 std::pair<std::unordered_set<size_t>, std::unordered_set<size_t>>
-TerritoryAnalyser::collectImpactedOwners(int player, int team, const std::unordered_set<size_t>& impactedBuildings) const {
+TerritoryAnalyser::collectImpactedOwners(int player, int team, const std::unordered_set<size_t>& impactedObstructions) const {
     std::unordered_set<size_t> impactedPlayers;
     std::unordered_set<size_t> impactedTeams;
     if (player > 0) {
         impactedPlayers.insert(static_cast<size_t>(player));
         impactedTeams.insert(static_cast<size_t>(team));
     }
-    for (const size_t id : impactedBuildings) {
-        const auto it = buildingInstancesById.find(id);
-        if (it == buildingInstancesById.end()) continue;
+    for (const size_t id : impactedObstructions) {
+        const auto it = obstructionInstancesById.find(id);
+        if (it == obstructionInstancesById.end()) continue;
         if (it->second.player > 0) {
             impactedPlayers.insert(it->second.player);
             impactedTeams.insert(it->second.team);
@@ -317,34 +400,34 @@ TerritoryAnalyser::collectImpactedOwners(int player, int team, const std::unorde
 // ---------- performTerritoryUpdateWithDSUSync ----------
 
 std::tuple<size_t, size_t, size_t, size_t>
-TerritoryAnalyser::performTerritoryUpdateWithDSUSync(PlayerObject buildingInstance, const std::string& mod) {
+TerritoryAnalyser::performTerritoryUpdateWithDSUSync(PlayerObject obstructionInstance, const std::string& mod) {
     if (mod == "remove") {
-        // Must run before updateTerritory so that dsuParent_, buildingInstancesById,
-        // and cellBuildingAttribution still contain the removed building.
-        const BuildingInstanceKey remKey{
-            buildingInstance.player, buildingInstance.team,
-            buildingInstance.building, buildingInstance.position
+        // Must run before updateTerritory so that dsuParent_, obstructionInstancesById,
+        // and cellObstructionAttribution still contain the removed obstruction.
+        const ObstructionInstanceKey remKey{
+            obstructionInstance.player, obstructionInstance.team,
+            obstructionInstance.obstruction, obstructionInstance.position
         };
-        const auto remKeyIt = buildingInstanceIdsByKey.find(remKey);
-        if (remKeyIt != buildingInstanceIdsByKey.end() && !remKeyIt->second.empty()) {
+        const auto remKeyIt = obstructionInstanceIdsByKey.find(remKey);
+        if (remKeyIt != obstructionInstanceIdsByKey.end() && !remKeyIt->second.empty()) {
             removeFromConnectedObstructions(remKeyIt->second.back());
         }
     }
 
-    auto bounds = updateTerritory(buildingInstance, buildingInstance.player, mod);
+    auto bounds = updateTerritory(obstructionInstance, obstructionInstance.player, mod);
 
     if (mod == "add") {
         // Resolve the instanceId assigned inside updateTerritory via the key lookup.
-        const BuildingInstanceKey newKey{
-            buildingInstance.player, buildingInstance.team,
-            buildingInstance.building, buildingInstance.position
+        const ObstructionInstanceKey newKey{
+            obstructionInstance.player, obstructionInstance.team,
+            obstructionInstance.obstruction, obstructionInstance.position
         };
-        const auto newKeyIt = buildingInstanceIdsByKey.find(newKey);
-        if (newKeyIt != buildingInstanceIdsByKey.end() && !newKeyIt->second.empty()) {
+        const auto newKeyIt = obstructionInstanceIdsByKey.find(newKey);
+        if (newKeyIt != obstructionInstanceIdsByKey.end() && !newKeyIt->second.empty()) {
             const size_t newInstanceId = newKeyIt->second.back();
             addToConnectedObstructions(newInstanceId,
-                buildingInstance.position.first, buildingInstance.position.second,
-                buildingInstance.info.width, buildingInstance.info.height);
+                obstructionInstance.position.first, obstructionInstance.position.second,
+                obstructionInstance.info.width, obstructionInstance.info.height);
         }
     }
 
@@ -382,7 +465,7 @@ void TerritoryAnalyser::rebuildMasterBoards() {
 
 // ---------- updatePlayerAndTeamFills ----------
 
-void TerritoryAnalyser::updatePlayerAndTeamFills(size_t x, size_t y, const BuildingInfo& info, bool isFastPath, const std::string& mod, const std::vector<size_t>& dsuGroupBounds) {
+void TerritoryAnalyser::updatePlayerAndTeamFills(size_t x, size_t y, const ObstructionInfo& info, bool isFastPath, const std::string& mod, const std::vector<size_t>& dsuGroupBounds) {
     const size_t influenceExtent = info.influenceRadius + info.influenceSoftExpansion;
     auto playerFillResult = updateFill(
         x, y, info.width, info.height, influenceExtent, isFastPath, mod,
@@ -398,6 +481,7 @@ void TerritoryAnalyser::updatePlayerAndTeamFills(size_t x, size_t y, const Build
     playerGaps                = std::move(playerFillResult.gaps);
     masterPlayerBoardFill     = std::move(playerFillResult.fillBoard);
     playerFillAssignmentBoard = std::move(playerFillResult.fillAssignmentBoard);
+    playerInteriorGroups      = std::move(playerFillResult.interiorGroups);
 
     auto teamFillResult = updateFill(
         x, y, info.width, info.height, influenceExtent, isFastPath, mod,
@@ -413,9 +497,10 @@ void TerritoryAnalyser::updatePlayerAndTeamFills(size_t x, size_t y, const Build
     teamGaps                = std::move(teamFillResult.gaps);
     masterTeamBoardFill     = std::move(teamFillResult.fillBoard);
     teamFillAssignmentBoard = std::move(teamFillResult.fillAssignmentBoard);
+    teamInteriorGroups      = std::move(teamFillResult.interiorGroups);
 }
 
-bool TerritoryAnalyser::buildingTouchesMapEdge(const PlayerObject& b) const {
+bool TerritoryAnalyser::obstructionTouchesMapEdge(const PlayerObject& b) const {
     return b.position.first == 0
         || b.position.second == 0
         || b.position.first + b.info.width >= size
@@ -425,24 +510,24 @@ bool TerritoryAnalyser::buildingTouchesMapEdge(const PlayerObject& b) const {
 // ---------- checkMapEdgeClosure ----------
 
 /**
- * @brief Returns true when the map-edge buildings in group form at least two separate connected
+ * @brief Returns true when the map-edge obstructions in group form at least two separate connected
  *        components that touch the map boundary, meaning the group can be considered closed via
  *        the map edge (the edge acts as an implicit wall segment).
  */
 bool TerritoryAnalyser::checkMapEdgeClosure(const ConnectedObstructions& group) const {
-    if (group.mapEdgeBuildingIds.size() < 2) return false;
+    if (group.mapEdgeObstructionIds.size() < 2) return false;
 
-    // Collect live PlayerObjects for each map-edge building.
-    std::vector<const PlayerObject*> edgeBuildings;
-    edgeBuildings.reserve(group.mapEdgeBuildingIds.size());
-    for (const size_t id : group.mapEdgeBuildingIds) {
-        const auto it = buildingInstancesById.find(id);
-        if (it != buildingInstancesById.end())
-            edgeBuildings.push_back(&it->second);
+    // Collect live PlayerObjects for each map-edge obstruction.
+    std::vector<const PlayerObject*> edgeObstructions;
+    edgeObstructions.reserve(group.mapEdgeObstructionIds.size());
+    for (const size_t id : group.mapEdgeObstructionIds) {
+        const auto it = obstructionInstancesById.find(id);
+        if (it != obstructionInstancesById.end())
+            edgeObstructions.push_back(&it->second);
     }
-    if (edgeBuildings.size() < 2) return false;
+    if (edgeObstructions.size() < 2) return false;
 
-    // BFS over map-edge buildings to count separate contact clusters.
+    // BFS over map-edge obstructions to count separate contact clusters.
     // Closedness requires >= 2 distinct clusters (two separate touches of the boundary).
     const auto touches = [](const PlayerObject& a, const PlayerObject& b) {
         const int ax = static_cast<int>(a.position.first), ay = static_cast<int>(a.position.second);
@@ -453,7 +538,7 @@ bool TerritoryAnalyser::checkMapEdgeClosure(const ConnectedObstructions& group) 
             && std::max(0, std::max(ay - (by + bh), by - (ay + ah))) == 0;
     };
 
-    const size_t M = edgeBuildings.size();
+    const size_t M = edgeObstructions.size();
     std::vector<bool> visited(M, false);
     std::vector<size_t> frontier;
     size_t components = 0;
@@ -466,7 +551,7 @@ bool TerritoryAnalyser::checkMapEdgeClosure(const ConnectedObstructions& group) 
         while (!frontier.empty()) {
             const size_t cur = frontier.back(); frontier.pop_back();
             for (size_t j = 0; j < M; ++j) {
-                if (!visited[j] && touches(*edgeBuildings[cur], *edgeBuildings[j])) {
+                if (!visited[j] && touches(*edgeObstructions[cur], *edgeObstructions[j])) {
                     visited[j] = true;
                     frontier.push_back(j);
                 }
@@ -479,14 +564,14 @@ bool TerritoryAnalyser::checkMapEdgeClosure(const ConnectedObstructions& group) 
 // ---------- addToConnectedObstructions ----------
 
 /**
- * @brief Registers newInstanceId in the DSU and merges it with any touching existing buildings
+ * @brief Registers newInstanceId in the DSU and merges it with any touching existing obstructions
  *        (footprint gap <= 0 in both axes).  If the new connection creates a cycle within an
  *        already-connected component, marks that component as closed.
  */
 void TerritoryAnalyser::addToConnectedObstructions(size_t newInstanceId, size_t x, size_t y, size_t width, size_t height) {
-    const PlayerObject& newObj = buildingInstancesById.at(newInstanceId);
+    const PlayerObject& newObj = obstructionInstancesById.at(newInstanceId);
 
-    // Scan the 1-cell border ring around the footprint in cellBuildingAttribution
+    // Scan the 1-cell border ring around the footprint in cellObstructionAttribution
     // (O(perimeter)) to find candidate neighbours, then confirm strict adjacency.
     const int fx = static_cast<int>(x);
     const int fy = static_cast<int>(y);
@@ -497,8 +582,8 @@ void TerritoryAnalyser::addToConnectedObstructions(size_t newInstanceId, size_t 
     std::unordered_set<size_t> candidateIds;
     const auto gatherCandidates = [&](int cx, int cy) {
         if (cx < 0 || cy < 0 || cx >= mapSize || cy >= mapSize) return;
-        const auto it = cellBuildingAttribution.find({static_cast<size_t>(cx), static_cast<size_t>(cy)});
-        if (it != cellBuildingAttribution.end())
+        const auto it = cellObstructionAttribution.find({static_cast<size_t>(cx), static_cast<size_t>(cy)});
+        if (it != cellObstructionAttribution.end())
             candidateIds.insert(it->second.begin(), it->second.end());
     };
     for (int cx = fx - 1; cx <= fx + fw; ++cx) {
@@ -511,22 +596,22 @@ void TerritoryAnalyser::addToConnectedObstructions(size_t newInstanceId, size_t 
     }
     candidateIds.erase(newInstanceId);
 
-    // Register the new building as its own DSU node and group.
+    // Register the new obstruction as its own DSU node and group.
     dsuParent_[newInstanceId] = newInstanceId;
     dsuRank_[newInstanceId] = 0;
     ConnectedObstructions& newGroup = connectedGroupData_[newInstanceId];
-    newGroup.buildings.insert(newObj);
+    newGroup.obstructions.insert(newObj);
     newGroup.bounds = {x, x + width - 1, y, y + height - 1};
-    if (buildingTouchesMapEdge(newObj))
-        newGroup.mapEdgeBuildingIds.insert(newInstanceId);
+    if (obstructionTouchesMapEdge(newObj))
+        newGroup.mapEdgeObstructionIds.insert(newInstanceId);
 
-    // Union with every touching building; DSU merges groups automatically.
+    // Union with every touching obstruction; DSU merges groups automatically.
     // Skip candidates with no DSU node (safety guard: they may have been
     // removed or not yet registered).
     for (const size_t candidateId : candidateIds) {
         if (!dsuParent_.count(candidateId)) continue;
-        const auto candidateIt = buildingInstancesById.find(candidateId);
-        if (candidateIt == buildingInstancesById.end()) continue;
+        const auto candidateIt = obstructionInstancesById.find(candidateId);
+        if (candidateIt == obstructionInstancesById.end()) continue;
         const PlayerObject& candidate = candidateIt->second;
         const int bx = static_cast<int>(candidate.position.first);
         const int by = static_cast<int>(candidate.position.second);
@@ -552,7 +637,7 @@ void TerritoryAnalyser::addToConnectedObstructions(size_t newInstanceId, size_t 
 
 /**
  * @brief Removes removedId from the DSU, then reconstructs fresh DSU nodes and ConnectedObstructions
- *        groups for the surviving members by BFS-partitioning them into connected components.
+ *        groups for the surviving mates by BFS-partitioning them into connected components.
  *        Each new component is re-evaluated for cycle-closure and map-edge closure.
  */
 void TerritoryAnalyser::removeFromConnectedObstructions(size_t removedId) {
@@ -568,9 +653,9 @@ void TerritoryAnalyser::removeFromConnectedObstructions(size_t removedId) {
 
     // Collect surviving mates into an indexed list for BFS.
     std::vector<PlayerObject> mates;
-    mates.reserve(groupIt->second.buildings.size());
-    for (const PlayerObject& b : groupIt->second.buildings) {
-        if (b.instanceId != removedId && buildingInstancesById.count(b.instanceId))
+    mates.reserve(groupIt->second.obstructions.size());
+    for (const PlayerObject& b : groupIt->second.obstructions) {
+        if (b.instanceId != removedId && obstructionInstancesById.count(b.instanceId))
             mates.push_back(b);
     }
 
@@ -585,7 +670,7 @@ void TerritoryAnalyser::removeFromConnectedObstructions(size_t removedId) {
 
     if (mates.empty()) return;
 
-    // Direct footprint adjacency: two buildings touch when their footprint rectangles
+    // Direct footprint adjacency: two obstructions touch when their footprint rectangles
     // are no more than 0 cells apart in both axes (including diagonal contact).
     const auto footprintTouches = [](const PlayerObject& a, const PlayerObject& b) {
         const int ax = static_cast<int>(a.position.first),  ay = static_cast<int>(a.position.second);
@@ -626,7 +711,7 @@ void TerritoryAnalyser::removeFromConnectedObstructions(size_t removedId) {
     std::vector<std::unordered_set<size_t>> compEdgeIds(numComponents);
     for (size_t i = 0; i < N; ++i) {
         nodeCount[compOf[i]]++;
-        if (buildingTouchesMapEdge(mates[i]))
+        if (obstructionTouchesMapEdge(mates[i]))
             compEdgeIds[compOf[i]].insert(mates[i].instanceId);
     }
     for (size_t i = 0; i < N; ++i)
@@ -648,17 +733,17 @@ void TerritoryAnalyser::removeFromConnectedObstructions(size_t removedId) {
                 dsuParent_[id] = id;
                 dsuRank_[id] = 0;
                 ConnectedObstructions& g = connectedGroupData_[id];
-                g.buildings.insert(mates[i]);
+                g.obstructions.insert(mates[i]);
                 const size_t px = mates[i].position.first, py = mates[i].position.second;
                 g.bounds = {px, px + mates[i].info.width - 1, py, py + mates[i].info.height - 1};
                 g.closed = compClosed;
-                g.mapEdgeBuildingIds = compEdgeIds[comp];
+                g.mapEdgeObstructionIds = compEdgeIds[comp];
                 g.closedWithMapEdge = (compEdgeIds[comp].size() >= 2) ? checkMapEdgeClosure(g) : false;
             } else {
                 dsuParent_[id] = compRoot;
                 dsuRank_[id] = 0;
                 ConnectedObstructions& g = connectedGroupData_[compRoot];
-                g.buildings.insert(mates[i]);
+                g.obstructions.insert(mates[i]);
                 const size_t px = mates[i].position.first, py = mates[i].position.second;
                 g.bounds[0] = std::min(g.bounds[0], px);
                 g.bounds[1] = std::max(g.bounds[1], px + mates[i].info.width - 1);
@@ -682,7 +767,7 @@ size_t TerritoryAnalyser::dsuFind(size_t id) {
 
 /**
  * @brief Merges the DSU trees rooted at a and b (union by rank) and combines the corresponding
- *        ConnectedObstructions groups: buildings, bounds, closure flags, and map-edge building ids.
+ *        ConnectedObstructions groups: obstructions, bounds, closure flags, and map-edge obstruction ids.
  */
 void TerritoryAnalyser::dsuUnion(size_t a, size_t b) {
     size_t ra = dsuFind(a);
@@ -695,57 +780,57 @@ void TerritoryAnalyser::dsuUnion(size_t a, size_t b) {
     // Merge group data from the dying root (rb) into the survivor (ra).
     ConnectedObstructions& ga = connectedGroupData_[ra];
     ConnectedObstructions& gb = connectedGroupData_[rb];
-    for (const PlayerObject& b : gb.buildings)
-        ga.buildings.insert(b);
+    for (const PlayerObject& b : gb.obstructions)
+        ga.obstructions.insert(b);
     ga.bounds[0] = std::min(ga.bounds[0], gb.bounds[0]);
     ga.bounds[1] = std::max(ga.bounds[1], gb.bounds[1]);
     ga.bounds[2] = std::min(ga.bounds[2], gb.bounds[2]);
     ga.bounds[3] = std::max(ga.bounds[3], gb.bounds[3]);
     ga.closed = ga.closed || gb.closed;
-    ga.mapEdgeBuildingIds.insert(gb.mapEdgeBuildingIds.begin(), gb.mapEdgeBuildingIds.end());
-    if (ga.mapEdgeBuildingIds.size() >= 2)
+    ga.mapEdgeObstructionIds.insert(gb.mapEdgeObstructionIds.begin(), gb.mapEdgeObstructionIds.end());
+    if (ga.mapEdgeObstructionIds.size() >= 2)
         ga.closedWithMapEdge = checkMapEdgeClosure(ga);
     else
         ga.closedWithMapEdge = false;
     connectedGroupData_.erase(rb);
 }
 
-// ---------- collectAttributedBuildingsInFootprint ----------
+// ---------- collectAttributedObstructionsInFootprint ----------
 
 /**
- * @brief Returns the set of building instance ids whose influence radius covers at least one cell
- *        in the footprint [x, x+width) x [y, y+height), queried via cellBuildingAttribution.
+ * @brief Returns the set of obstruction instance ids whose influence radius covers at least one cell
+ *        in the footprint [x, x+width) x [y, y+height), queried via cellObstructionAttribution.
  */
-std::unordered_set<size_t> TerritoryAnalyser::collectAttributedBuildingsInFootprint(size_t x, size_t y, size_t width, size_t height) const {
-    std::unordered_set<size_t> impactedBuildings;
+std::unordered_set<size_t> TerritoryAnalyser::collectAttributedObstructionsInFootprint(size_t x, size_t y, size_t width, size_t height) const {
+    std::unordered_set<size_t> impactedObstructions;
 
     for (size_t currentX = x; currentX < x + width && currentX < size; ++currentX) {
         for (size_t currentY = y; currentY < y + height && currentY < size; ++currentY) {
-            const auto attributionIt = cellBuildingAttribution.find(Position{currentX, currentY});
-            if (attributionIt == cellBuildingAttribution.end()) {
+            const auto attributionIt = cellObstructionAttribution.find(Position{currentX, currentY});
+            if (attributionIt == cellObstructionAttribution.end()) {
                 continue;
             }
 
-            impactedBuildings.insert(attributionIt->second.begin(), attributionIt->second.end());
+            impactedObstructions.insert(attributionIt->second.begin(), attributionIt->second.end());
         }
     }
 
-    return impactedBuildings;
+    return impactedObstructions;
 }
 
-// ---------- updateCellAttributionForBuilding ----------
+// ---------- updateCellAttributionForObstruction ----------
 
 /**
- * @brief Adds or removes buildingInstance's id from cellBuildingAttribution for every cell within
+ * @brief Adds or removes obstructionInstance's id from cellObstructionAttribution for every cell within
  *        its full influence area (footprint + influenceRadius + influenceSoftExpansion).
- *        Used to track which buildings affect each map cell for incremental update queries.
+ *        Used to track which obstructions affect each map cell for incremental update queries.
  */
-void TerritoryAnalyser::updateCellAttributionForBuilding(const PlayerObject& buildingInstance, std::string mod) {
-    const size_t buildingId = buildingInstance.instanceId;
+void TerritoryAnalyser::updateCellAttributionForObstruction(const PlayerObject& obstructionInstance, std::string mod) {
+    const size_t obstructionId = obstructionInstance.instanceId;
 
-    const size_t centerX = buildingInstance.position.first;
-    const size_t centerY = buildingInstance.position.second;
-    const BuildingInfo& info = buildingInstance.info;
+    const size_t centerX = obstructionInstance.position.first;
+    const size_t centerY = obstructionInstance.position.second;
+    const ObstructionInfo& info = obstructionInstance.info;
 
     const size_t r = info.influenceRadius;
     const size_t bh = info.height;
@@ -774,48 +859,48 @@ void TerritoryAnalyser::updateCellAttributionForBuilding(const PlayerObject& bui
 
             const Position cell{x, y};
             if (mod == "add") {
-                cellBuildingAttribution[cell].insert(buildingId);
+                cellObstructionAttribution[cell].insert(obstructionId);
             } else {
-                auto cellIt = cellBuildingAttribution.find(cell);
-                if (cellIt == cellBuildingAttribution.end()) {
+                auto cellIt = cellObstructionAttribution.find(cell);
+                if (cellIt == cellObstructionAttribution.end()) {
                     continue;
                 }
 
-                cellIt->second.erase(buildingId);
+                cellIt->second.erase(obstructionId);
                 if (cellIt->second.empty()) {
-                    cellBuildingAttribution.erase(cellIt);
+                    cellObstructionAttribution.erase(cellIt);
                 }
             }
         }
     }
 }
 
-// ---------- reapplyAttributedBuildings ----------
+// ---------- reapplyAttributedObstructions ----------
 
 /**
- * @brief Remove-then-readd each building in buildingIds (except skipId) to recompute their
+ * @brief Remove-then-readd each obstruction in obstructionIds (except skipId) to recompute their
  *        stored influence boards after an obstruction change that may have altered path distances.
  * @return The union of all territory bounds affected.
  */
-std::tuple<std::size_t, std::size_t, std::size_t, std::size_t> TerritoryAnalyser::reapplyAttributedBuildings(
-    const std::unordered_set<size_t>& buildingIds,
+std::tuple<std::size_t, std::size_t, std::size_t, std::size_t> TerritoryAnalyser::reapplyAttributedObstructions(
+    const std::unordered_set<size_t>& obstructionIds,
     size_t skipId) {
 
     std::tuple<size_t, size_t, size_t, size_t> mergedBounds = std::make_tuple(0U, 0U, 0U, 0U);
 
-    for (const size_t id : buildingIds) {
+    for (const size_t id : obstructionIds) {
         if (id == skipId) {
             continue;
         }
 
-        const auto buildingIt = buildingInstancesById.find(id);
-        if (buildingIt == buildingInstancesById.end()) {
+        const auto obstructionIt = obstructionInstancesById.find(id);
+        if (obstructionIt == obstructionInstancesById.end()) {
             continue;
         }
 
-        const PlayerObject affectedBuilding = buildingIt->second;
-        const auto removalBounds = updateTerritory(affectedBuilding, affectedBuilding.player, "remove");
-        const auto addBounds = updateTerritory(affectedBuilding, affectedBuilding.player, "add");
+        const PlayerObject affectedObstruction = obstructionIt->second;
+        const auto removalBounds = updateTerritory(affectedObstruction, affectedObstruction.player, "remove");
+        const auto addBounds = updateTerritory(affectedObstruction, affectedObstruction.player, "add");
 
         mergedBounds = mergeBounds(mergedBounds, mergeBounds(removalBounds, addBounds));
     }
@@ -846,13 +931,13 @@ std::tuple<size_t, size_t, size_t, size_t> TerritoryAnalyser::mergeBounds(
         std::max(lMaxY, rMaxY));
 }
 
-// ---------- updateObstruction ----------
+// ---------- updateObstructionBoards ----------
 
 /**
  * @brief Updates the per-player and per-team obstruction boards and counts for the footprint
  *        [x, x+bw) x [y, y+bh), then rebuilds the master bitmask boards for each affected cell.
  */
-void TerritoryAnalyser::updateObstruction(size_t x, size_t y, size_t bw, size_t bh, int player, int team, std::string mod) {
+void TerritoryAnalyser::updateObstructionBoards(size_t x, size_t y, size_t bw, size_t bh, int player, int team, std::string mod) {
 
     const bool isAdd = (mod == "add");
 
@@ -911,21 +996,21 @@ void TerritoryAnalyser::updateObstruction(size_t x, size_t y, size_t bw, size_t 
 // ---------- updateTerritory ----------
 
 /**
- * @brief Adds or removes a building's territory influence contribution to playerGrids and teamGrids.
+ * @brief Adds or removes an obstruction's territory influence contribution to playerGrids and teamGrids.
  *        For "add": computes Euclidean (ranged) or Dijkstra (non-ranged) influence, stores the
  *        influence board on the instance for later removal, and registers the instance.
  *        For "remove": retrieves the stored influence board and subtracts it.
  * @return The (minX, maxX, minY, maxY) bounds of the affected region.
  */
 std::tuple <std::size_t,std::size_t,std::size_t,std::size_t> 
-TerritoryAnalyser::updateTerritory(PlayerObject buildingInstance, size_t player, std::string mod) {
-    // adds territory influence around a rectangular building footprint
+TerritoryAnalyser::updateTerritory(PlayerObject obstructionInstance, size_t player, std::string mod) {
+    // adds territory influence around a rectangular obstruction footprint
     // footprint spans [centerX, centerX+bw) x [centerY, centerY+bh)
     // influence radius r extends outward from the footprint edges
     
-    size_t centerX=buildingInstance.position.first, centerY=buildingInstance.position.second;
-    std::string building=buildingInstance.building; 
-    BuildingInfo info=buildingInstance.info;
+    size_t centerX=obstructionInstance.position.first, centerY=obstructionInstance.position.second;
+    std::string obstruction=obstructionInstance.obstruction; 
+    ObstructionInfo info=obstructionInstance.info;
     size_t x, y; 
     double dist;
     
@@ -936,8 +1021,8 @@ TerritoryAnalyser::updateTerritory(PlayerObject buildingInstance, size_t player,
 
     Config config = AppConfig::get();
     size_t r = info.influenceRadius, bh = info.height, bw = info.width, softEdge = info.influenceSoftExpansion;
-    const bool isRangedBuilding = std::find(rangedBuildings.begin(), rangedBuildings.end(), building) != rangedBuildings.end();
-    const bool forceRadialInfluence = config.forceRadialInfluenceForAllBuildings;
+    const bool isRangedObstruction = std::find(rangedObstructions.begin(), rangedObstructions.end(), obstruction) != rangedObstructions.end();
+    const bool forceRadialInfluence = config.forceRadialInfluenceForAllObstructions;
     
     // Rectangle bounds (inclusive max edge for distance calc)
     double rectMinX = static_cast<double>(centerX);
@@ -956,30 +1041,30 @@ TerritoryAnalyser::updateTerritory(PlayerObject buildingInstance, size_t player,
 
 
     if(mod == "remove") {
-        const BuildingInstanceKey key{
-            buildingInstance.player,
-            buildingInstance.team,
-            buildingInstance.building,
-            buildingInstance.position
+        const ObstructionInstanceKey key{
+            obstructionInstance.player,
+            obstructionInstance.team,
+            obstructionInstance.obstruction,
+            obstructionInstance.position
         };
 
-        const auto keyedIdsIt = buildingInstanceIdsByKey.find(key);
-        if (keyedIdsIt == buildingInstanceIdsByKey.end() || keyedIdsIt->second.empty()) {
-            std::cerr << "Warning: No building instance found at (" << centerX << ", " << centerY << ") for removal." << std::endl;
+        const auto keyedIdsIt = obstructionInstanceIdsByKey.find(key);
+        if (keyedIdsIt == obstructionInstanceIdsByKey.end() || keyedIdsIt->second.empty()) {
+            std::cerr << "Warning: No obstruction instance found at (" << centerX << ", " << centerY << ") for removal." << std::endl;
             return std::make_tuple(0, 0, 0, 0);
         }
 
         size_t removalId = keyedIdsIt->second.back();
-        if (buildingInstance.instanceId != 0) {
-            const auto requestedIt = std::find(keyedIdsIt->second.begin(), keyedIdsIt->second.end(), buildingInstance.instanceId);
+        if (obstructionInstance.instanceId != 0) {
+            const auto requestedIt = std::find(keyedIdsIt->second.begin(), keyedIdsIt->second.end(), obstructionInstance.instanceId);
             if (requestedIt != keyedIdsIt->second.end()) {
-                removalId = buildingInstance.instanceId;
+                removalId = obstructionInstance.instanceId;
             }
         }
 
-        const auto storedIt = buildingInstancesById.find(removalId);
-        if (storedIt == buildingInstancesById.end()) {
-            std::cerr << "Warning: No stored building instance id " << removalId << " found for removal." << std::endl;
+        const auto storedIt = obstructionInstancesById.find(removalId);
+        if (storedIt == obstructionInstancesById.end()) {
+            std::cerr << "Warning: No stored obstruction instance id " << removalId << " found for removal." << std::endl;
             return std::make_tuple(0, 0, 0, 0);
         }
 
@@ -1005,27 +1090,27 @@ TerritoryAnalyser::updateTerritory(PlayerObject buildingInstance, size_t player,
             }
         }
 
-        updateCellAttributionForBuilding(removal, "remove");
-        buildingInstancesById.erase(removalId);
+        updateCellAttributionForObstruction(removal, "remove");
+        obstructionInstancesById.erase(removalId);
 
-        auto mutableIdsIt = buildingInstanceIdsByKey.find(key);
-        if (mutableIdsIt != buildingInstanceIdsByKey.end()) {
+        auto mutableIdsIt = obstructionInstanceIdsByKey.find(key);
+        if (mutableIdsIt != obstructionInstanceIdsByKey.end()) {
             auto& ids = mutableIdsIt->second;
             ids.erase(std::remove(ids.begin(), ids.end(), removalId), ids.end());
             if (ids.empty()) {
-                buildingInstanceIdsByKey.erase(mutableIdsIt);
+                obstructionInstanceIdsByKey.erase(mutableIdsIt);
             }
         }
 
         return std::make_tuple(removalMinX, removalMaxX, removalMinY, removalMaxY);
     }
     // else, it is add
-    buildingInstance.influenceBoard = std::vector(maxX - minX, std::vector<double>(maxY - minY, 0));
-    buildingInstance.influenceMinX = influenceMinX;
-    buildingInstance.influenceMinY = influenceMinY;
-    buildingInstance.player = player;
-    buildingInstance.team = (player == 0) ? 0 : static_cast<size_t>(teamAssignments.at(static_cast<int>(player)));
-    buildingInstance.instanceId = nextBuildingInstanceId++;
+    obstructionInstance.influenceBoard = std::vector(maxX - minX, std::vector<double>(maxY - minY, 0));
+    obstructionInstance.influenceMinX = influenceMinX;
+    obstructionInstance.influenceMinY = influenceMinY;
+    obstructionInstance.player = player;
+    obstructionInstance.team = (player == 0) ? 0 : static_cast<size_t>(teamAssignments.at(static_cast<int>(player)));
+    obstructionInstance.instanceId = nextObstructionInstanceId++;
 
     // if player is Gaia
     if (player == 0) {
@@ -1036,9 +1121,9 @@ TerritoryAnalyser::updateTerritory(PlayerObject buildingInstance, size_t player,
         }
     } else {
         const auto& config = AppConfig::get();
-        const bool isNonWalkableTerrainBuilding = std::find(config.nonWalkableTerrainBuildings.begin(), config.nonWalkableTerrainBuildings.end(), building) != config.nonWalkableTerrainBuildings.end();
+        const bool isNonWalkableTerrainObstruction = std::find(config.nonWalkableTerrainObstructions.begin(), config.nonWalkableTerrainObstructions.end(), obstruction) != config.nonWalkableTerrainObstructions.end();
 
-        // Ranged buildings: Euclidean distance, bounding box, obstructions ignored.
+        // Ranged obstructions: Euclidean distance, bounding box, obstructions ignored.
         for (x = minX; x < maxX; ++x) {
             double dx = std::max(0.0, std::max(rectMinX - static_cast<double>(x), static_cast<double>(x) - rectMaxX));
             for (y = minY; y < maxY; ++y) {
@@ -1046,18 +1131,18 @@ TerritoryAnalyser::updateTerritory(PlayerObject buildingInstance, size_t player,
                 double dy = std::max(0.0, std::max(rectMinY - static_cast<double>(y), static_cast<double>(y) - rectMaxY));
                 dist = std::sqrt(dx * dx + dy * dy);
                 double value = (dist > r) ? std::max(0.0, (r + softEdge + 1.0 - dist) / (softEdge + 1) * (static_cast<double>(threshold) / info.softEdgeDivFactor)) : static_cast<double>(info.influenceWeight);
-                // AK Why not just do the cellBuildingAttribution here? Does not that save having to do a double for loop?
+                // AK Why not just do the cellObstructionAttribution here? Does not that save having to do a double for loop?
 
-                if (isRangedBuilding) {
+                if (isRangedObstruction || forceRadialInfluence) {
                     playerGrids.at(player).setValue(x, y, playerGrids.at(player).getValue(x, y) + value);
                     teamGrids.at(teamAssignments.at(player)).setValue(x, y, teamGrids.at(teamAssignments.at(player)).getValue(x, y) + value);
                     // save local effect to object so that removal is easy.
-                    buildingInstance.influenceBoard[x - minX][y - minY] = value;
+                    obstructionInstance.influenceBoard[x - minX][y - minY] = value;
                 }
             }
         }
-        if (!isRangedBuilding && !forceRadialInfluence) {
-            // Non-ranged buildings: weighted 8-neighbour Dijkstra from the footprint.
+        if (!isRangedObstruction && !forceRadialInfluence) {
+            // Non-ranged obstructions: weighted 8-neighbour Dijkstra from the footprint.
             // Diagonal moves are allowed, but corner cutting through blocked orthogonals is disallowed.
             const double infDist = std::numeric_limits<double>::infinity();
             const double maxPositiveDistance = static_cast<double>(r + softEdge) + 1.0;
@@ -1086,7 +1171,7 @@ TerritoryAnalyser::updateTerritory(PlayerObject buildingInstance, size_t player,
                 playerGrids.at(player).setValue(x, y, playerGrids.at(player).getValue(x, y) + value);
                 teamGrids.at(teamAssignments.at(player)).setValue(x, y, teamGrids.at(teamAssignments.at(player)).getValue(x, y) + value);
                 // save local effect to object so that removal is easy.
-                buildingInstance.influenceBoard[x - influenceMinX][y - influenceMinY] = value;
+                obstructionInstance.influenceBoard[x - influenceMinX][y - influenceMinY] = value;
 
                 actualMinX = std::min(actualMinX, x);
                 actualMaxX = std::max(actualMaxX, x);
@@ -1104,15 +1189,19 @@ TerritoryAnalyser::updateTerritory(PlayerObject buildingInstance, size_t player,
             const auto isInFootprint = [centerX, centerY, bh, bw](size_t x, size_t y) {
                 return x >= centerX && x < centerX + bw && y >= centerY && y < centerY + bh;
             };
+            
+            const auto isInFootprintPlusRadius = [centerX, centerY, bh, bw, r](size_t x, size_t y) {
+                return x >= centerX - r && x < centerX + bw + r && y >= centerY - r && y < centerY + bh + r;
+            };
 
             const auto isTraversable = [&](size_t x, size_t y) {
-                if (isInFootprint(x, y)) {
+                if (isInFootprintPlusRadius(x, y)) {
                     return true;
                 }
                 if (masterPlayerObstructionBoard[x][y] != -1) {
                     return false;
                 }
-                if (!WalkableTerrainBoard[x][y] && !isNonWalkableTerrainBuilding) {
+                if (!WalkableTerrainBoard[x][y] && !isNonWalkableTerrainObstruction) {
                     return false;
                 }
                 return true;
@@ -1200,15 +1289,15 @@ TerritoryAnalyser::updateTerritory(PlayerObject buildingInstance, size_t player,
         }
     }
 
-    updateCellAttributionForBuilding(buildingInstance, "add");
-    buildingInstancesById[buildingInstance.instanceId] = buildingInstance;
-    const BuildingInstanceKey addKey{
-        buildingInstance.player,
-        buildingInstance.team,
-        buildingInstance.building,
-        buildingInstance.position
+    updateCellAttributionForObstruction(obstructionInstance, "add");
+    obstructionInstancesById[obstructionInstance.instanceId] = obstructionInstance;
+    const ObstructionInstanceKey addKey{
+        obstructionInstance.player,
+        obstructionInstance.team,
+        obstructionInstance.obstruction,
+        obstructionInstance.position
     };
-    buildingInstanceIdsByKey[addKey].push_back(buildingInstance.instanceId);
+    obstructionInstanceIdsByKey[addKey].push_back(obstructionInstance.instanceId);
     return  std::make_tuple(minX, maxX, minY, maxY);
 }
 
@@ -1615,7 +1704,7 @@ cv::Mat TerritoryAnalyser::getContestedMap(std::string type) const {
 // ---------- colourPass ----------
 
 /**
- * @brief Renders all territory layers (gaia, edges, raw building territory, fill territory) for
+ * @brief Renders all territory layers (gaia, edges, raw obstruction territory, fill territory) for
  *        the given render type ("player" or "team") into the corresponding final territory map.
  *        Also produces the contested map and its truth mask for that type.  Multiple owners in
  *        a cell produce a contested rendering depending on contestedTerritoryMethod.
@@ -1666,7 +1755,7 @@ void TerritoryAnalyser::colourPass(const std::string& renderType) {
         for (size_t y = 0; y < board.size(); ++y) {
 
             // initialise values
-            bool existingVal = false, isEdge = false, isBuildingTerritory = false;
+            bool existingVal = false, isEdge = false, isObstructionTerritory = false;
 
 // ************** 1. GAIA: If the cell is unoccupied or occupied by gaia, skip **************** //
 
@@ -1710,7 +1799,7 @@ void TerritoryAnalyser::colourPass(const std::string& renderType) {
                             // This would likely involve drawing lines on the cell in the colours of the players involved
                             // and may require a more complex data structure to track which players are contesting the cell
                         } else if (config.contestedTerritoryMethod == "growth") {
-                            // Implemented in updateBuilding
+                            // Implemented in updateObstruction
                             break;
                         } else if (config.contestedTerritoryMethod == "staticColour") {
                             // Implement static colour method, where the cell is coloured a specific colour for contested regardless of players involved
@@ -1745,7 +1834,7 @@ void TerritoryAnalyser::colourPass(const std::string& renderType) {
                             mat.at<cv::Vec4b>(x, y) = getColour(static_cast<int>(k));
                             mat.at<cv::Vec4b>(x, y)[3] = config.territoryOpacity;
                             existingVal = true;
-                            isBuildingTerritory = true;
+                            isObstructionTerritory = true;
 
                         // if the cell is already occupied, mark it as contested
                         } else { 
@@ -1760,7 +1849,7 @@ void TerritoryAnalyser::colourPass(const std::string& renderType) {
 
 // ************** 4. TERRITORY FROM FILL **************** // 
 
-            if(!isEdge && !isBuildingTerritory) { 
+            if(!isEdge && !isObstructionTerritory) { 
 
                 if (fillBoard[x][y] == 0) {
                     continue;
@@ -1823,14 +1912,14 @@ TerritoryAnalyser::addPlTerrToMaster(std::vector<std::vector<double>> masterBoar
 
 
 
-// ---------- loadBuildingsDict ----------
+// ---------- loadObstructionsDict ----------
 
 /**
- * @brief Loads building definitions and ranged-building names from a JSON file (also tries the
- *        "../" prefix as a fallback).  Populates buildingsDict and rangedBuildings; military
- *        buildings are collected into militaryBuildings.  Exits on file or schema errors.
+ * @brief Loads obstruction definitions and ranged-obstruction names from a JSON file (also tries the
+ *        "../" prefix as a fallback).  Populates obstructionsDict and rangedObstructions; military
+ *        obstructions are collected into militaryObstructions.  Exits on file or schema errors.
  */
-void TerritoryAnalyser::loadBuildingsDict(const std::string& givenDictPath) {
+void TerritoryAnalyser::loadObstructionsDict(const std::string& givenDictPath) {
 
     std::ifstream file;
     std::string dictPath;
@@ -1844,7 +1933,7 @@ void TerritoryAnalyser::loadBuildingsDict(const std::string& givenDictPath) {
     }
 
     if (!file.is_open()) {
-        std::cerr << "Error: Could not open buildingsDict.json. Tried: buildingsDict.json, ../buildingsDict.json" << std::endl;
+        std::cerr << "Error: Could not open obstructionsDict.json. Tried: obstructionsDict.json, ../obstructionsDict.json" << std::endl;
         std::cerr << "Current path: " << std::filesystem::current_path() << std::endl;
         std::exit(1);
     }
@@ -1852,33 +1941,33 @@ void TerritoryAnalyser::loadBuildingsDict(const std::string& givenDictPath) {
     try {
         json data = json::parse(file);
         
-        // Extract the buildingsDict array from JSON
-        if (!data.contains("buildingsDict") || !data["buildingsDict"].is_array()) {
-            throw std::runtime_error("buildingsDict must be an array in JSON file");
+        // Extract the obstructionsDict array from JSON
+        if (!data.contains("obstructionsDict") || !data["obstructionsDict"].is_array()) {
+            throw std::runtime_error("obstructionsDict must be an array in JSON file");
         }
-        if (!data.contains("rangedBuildings") || !data["rangedBuildings"].is_array()) {
-            std::cerr << "Warning: rangedBuildings array not found in buildingsDict.json. Ranged buildings will not be identified." << std::endl;
+        if (!data.contains("rangedObstructions") || !data["rangedObstructions"].is_array()) {
+            std::cerr << "Warning: rangedObstructions array not found in obstructionsDict.json. Ranged obstructions will not be identified." << std::endl;
         }
 
 
-        // Ranged buildings 
-        rangedBuildings = data["rangedBuildings"].get<std::vector<std::string>>();
+        // Ranged obstructions 
+        rangedObstructions = data["rangedObstructions"].get<std::vector<std::string>>();
         
-        // Parse each building entry in the buildingsDict array
-        for (const auto& building : data["buildingsDict"]) {
-            if (!building.is_object()) {
-                throw std::runtime_error("Each building entry must be an object with \"name\", \"params\", and \"label\" fields");
+        // Parse each obstruction entry in the obstructionsDict array
+        for (const auto& obstruction : data["obstructionsDict"]) {
+            if (!obstruction.is_object()) {
+                throw std::runtime_error("Each obstruction entry must be an object with \"name\", \"params\", and \"label\" fields");
             }
             
-            std::string name = building.at("name").get<std::string>();
-            std::vector<double> properties = building.at("params").get<std::vector<double>>();
-            std::string label = building.at("label").get<std::string>();
+            std::string name = obstruction.at("name").get<std::string>();
+            std::vector<double> properties = obstruction.at("params").get<std::vector<double>>();
+            std::string label = obstruction.at("label").get<std::string>();
             
             if (properties.size() != 6) {
-                throw std::runtime_error("Each building must have 6 properties: [radius, weight, softEdge, softEdgeDivFactor, width, height]");
+                throw std::runtime_error("Each obstruction must have 6 properties: [radius, weight, softEdge, softEdgeDivFactor, width, height]");
             }
             
-            buildingsDict[name] = BuildingInfo{
+            obstructionsDict[name] = ObstructionInfo{
                 static_cast<size_t>(properties[0]),  // influenceRadius
                 static_cast<size_t>(properties[1]),  // influenceWeight
                 static_cast<size_t>(properties[2]),  // influenceSoftExpansion
@@ -1888,15 +1977,15 @@ void TerritoryAnalyser::loadBuildingsDict(const std::string& givenDictPath) {
                 label                                // label ("Combative" or "Other")
             };
             if (label == "Combative") {
-                combativeBuildings.push_back(name);
+                combativeObstructions.push_back(name);
             }
         }
     } catch (const json::parse_error& e) {
-        std::cerr << "Error: Failed to parse buildingsDict file '" << dictPath << "': " << e.what() << std::endl;
+        std::cerr << "Error: Failed to parse obstructionsDict file '" << dictPath << "': " << e.what() << std::endl;
         std::cerr << "Current path: " << std::filesystem::current_path() << std::endl;
         std::exit(1);
     } catch (const std::exception& e) {
-        std::cerr << "Error: Invalid buildingsDict format in '" << dictPath << "': " << e.what() << std::endl;
+        std::cerr << "Error: Invalid obstructionsDict format in '" << dictPath << "': " << e.what() << std::endl;
         std::exit(1);
     }
     
@@ -1907,7 +1996,7 @@ void TerritoryAnalyser::loadBuildingsDict(const std::string& givenDictPath) {
 
 /**
  * @brief Marks player as defeated, zeroes their territory grid, and adjusts team-grid contributions:
- *        ranged buildings are re-added to the fresh player grid; non-ranged buildings are removed
+ *        ranged obstructions are re-added to the fresh player grid; non-ranged obstructions are removed
  *        from the team grid.  Refreshes bool grids for the affected player and their team.
  */
 void TerritoryAnalyser::playerDefeated(size_t player) {
@@ -1919,16 +2008,16 @@ void TerritoryAnalyser::playerDefeated(size_t player) {
     // Re-initialise this player's territory grid (all influence zeroed).
     playerGrids.at(player) = Grid(static_cast<int>(size));
 
-    // Iterate all stored buildings for this player and:
+    // Iterate all stored obstructions for this player and:
     //   - ranged: re-apply stored influence to player grid; no change needed for team grid
     //             (ranged contribution was never cleared from the team grid).
     //   - non-ranged: remove stored influence from the team grid.
     size_t minX = 0, maxX = size, minY = 0, maxY = size;
 
-    for (const auto& [id, obj] : buildingInstancesById) {
+    for (const auto& [id, obj] : obstructionInstancesById) {
         if (obj.player != player) continue;
 
-        const bool isRanged = std::find(rangedBuildings.begin(), rangedBuildings.end(), obj.building) != rangedBuildings.end();
+        const bool isRanged = std::find(rangedObstructions.begin(), rangedObstructions.end(), obj.obstruction) != rangedObstructions.end();
         const size_t team = obj.team;
 
         for (size_t i = 0; i < obj.influenceBoard.size(); ++i) {

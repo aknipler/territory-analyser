@@ -20,7 +20,7 @@ class Grid {
         std::vector<std::vector<bool>> dataBool;
         size_t size;
 
-        std::unordered_map <std::string, std::tuple <std::size_t,std::size_t>> buildingDict;
+        std::unordered_map <std::string, std::tuple <std::size_t,std::size_t>> obstructionDict;
         
     public:
         // Constructor to initialize the dynamic 2D array

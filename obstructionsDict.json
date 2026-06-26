@@ -1,0 +1,26 @@
+{
+    "rangedObstructions": ["Tower", "Castle", "Town Center", "Krepost", "Settlement", "Fortified Church", "Donjon", "Bombard Tower", "Keep", "Guard Tower", "Watch Tower", "Fire Tower"],
+    "_comment": "radius, weight, soft edge, soft edge starting value div factor (threshold / div factor), obstruction width, obstruction height",
+    "obstructionsDict": [
+        {"name": "Palisade Wall",   "params": [3, 4, 3, 4.0, 1, 1], "label": "Other"},
+        {"name": "House",           "params": [5, 4, 4, 1.0, 2, 2], "label": "Other"},
+        {"name": "Mill",            "params": [5, 4, 4, 1.0, 2, 2], "label": "Other"},
+        {"name": "Mining Camp",     "params": [5, 4, 4, 1.0, 2, 2], "label": "Other"},
+        {"name": "Lumber Camp",     "params": [5, 4, 4, 1.0, 2, 2], "label": "Other"},
+        {"name": "Town Center",     "params": [9, 7, 4, 1.0, 4, 4], "label": "Combative"},
+        {"name": "Barracks",        "params": [7, 4, 5, 1.0, 3, 3], "label": "Combative"},
+        {"name": "Archery Range",   "params": [7, 4, 5, 1.0, 3, 3], "label": "Combative"},
+        {"name": "Stable",          "params": [7, 4, 5, 1.0, 3, 3], "label": "Combative"},
+        {"name": "Monastery",       "params": [7, 4, 5, 1.0, 3, 3], "label": "Combative"},
+        {"name": "Market",          "params": [4, 4, 4, 1.0, 4, 4], "label": "Other"},
+        {"name": "Siege Workshop",  "params": [8, 5, 5, 1.0, 4, 4], "label": "Combative"},
+        {"name": "University",      "params": [4, 4, 4, 1.0, 4, 4], "label": "Other"},
+        {"name": "Castle",          "params": [14, 8, 4, 1.0, 4, 4], "label": "Combative"},
+        {"name": "Tower",           "params": [9, 4, 4, 1.0, 1, 1], "label": "Combative"},
+        {"name": "Blacksmith",      "params": [4, 4, 4, 1.0, 3, 3], "label": "Other"},
+        {"name": "Tree",            "params": [0, 1, 0, 0.0, 1, 1], "label": "Other"},
+        {"name": "Gold Mine",       "params": [0, 1, 0, 0.0, 1, 1], "label": "Other"},
+        {"name": "Stone Mine",      "params": [0, 1, 0, 0.0, 1, 1], "label": "Other"},
+        {"name": "Cliff",           "params": [0, 1, 0, 0.0, 2, 2], "label": "Other"}
+    ]
+}

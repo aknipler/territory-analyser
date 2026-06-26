@@ -122,6 +122,7 @@ void Fill::registerCell(size_t x, size_t y, double cellValue) {
 
 void Fill::addGapGroup(const std::vector<Position>& group) {
     gapGroups_.push_back(group);
+    externalGapGroupCount_ = -1; // invalidate cached external count; mergeFills recomputes it
 }
 
 void Fill::addDilationCell(size_t x, size_t y) {
@@ -389,7 +390,15 @@ void Fill::batchConvertDilationToFill(
     bounds_[3] = maxY;
 }
 
-// ---------- Fill::getDominantPlayer ----------
+// ---------- Fill::setBoundaryCells / getBoundaryCells ----------
+
+// Boundary cells (fill cells 4-adjacent to a dilation wall) are recorded for free during
+// floodFill's BFS — no separate re-search. One interior group per fill: its cells are cells_,
+// its boundary is these.
+void Fill::setBoundaryCells(std::vector<Position>&& boundary) { boundaryCells_ = std::move(boundary); }
+const std::vector<Position>& Fill::getBoundaryCells() const { return boundaryCells_; }
+
+
 
 /**
  * @brief Returns the player id that owns this fill, or 0 if no player clears both the
@@ -416,13 +425,15 @@ size_t Fill::getDominantPlayer() const {
         return 0;
     }
 
-    // Boost every encloser, then pick the winner by effective (boosted) count.
+    // Boost every encloser, then pick the winner by effective (boosted) count. The walled boost is
+    // gap-attenuated (see walledBoostFactor): fewer gaps -> closer to the full isWalledMultiplier.
     double bestEffective = -1.0;
     size_t winner = 0;
     size_t winnerRawCount = 0;
+    const double encloserBoost = walledBoostFactor();
     for (const auto& kv : playerCellCount_) {
         const double effective = static_cast<double>(kv.second)
-            * (closure_.encloses(kv.first) ? isWalledMultiplier : 1.0);
+            * (closure_.encloses(kv.first) ? encloserBoost : 1.0);
         if (effective > bestEffective) {
             bestEffective = effective;
             winner = kv.first;
@@ -438,13 +449,124 @@ size_t Fill::getDominantPlayer() const {
                   << (bestEffective / cells_.size() * 100.0) << "%" << std::endl;
     }
 
-    // Ownership fraction uses the boosted (effective) count; the contested-investment
+    // Ownership fraction uses the boosted (effective) count but the contested-investment
     // gate uses the raw count so a boost can't fake a player's share of total investment.
     if (bestEffective / static_cast<double>(cells_.size()) > ownershipThreshold &&
         static_cast<double>(winnerRawCount) / static_cast<double>(totalAdjustedInvestment) > contestedOwnershipThreshold) {
         return winner;
     }
     return 0; // not enough to claim ownership
+}
+
+// ---------- gapReductionFactor ----------
+
+/**
+ * @brief Gap interpolation weight in [0,1] controlling how much of the walled boost an encloser
+ *        gets in getDominantPlayer: the effective factor is 1 + (isWalledMultiplier - 1) * weight,
+ *        so weight=1 (no penalty) gives the full boost and weight→0 (many gaps) decays toward 1.0
+ *        (no boost, never a penalty). Counts only EXTERNAL gap groups — gaps into a same-owner fill
+ *        (an internal seam, e.g. to a bridge fill) must not penalise ownership. The external count
+ *        is computed with cross-fill context in mergeFills and cached via setExternalGapGroupCount;
+ *        until then (or after gaps change) it falls back to the raw gapGroups_ count.
+ */
+double Fill::gapReductionFactor() const {
+    const double g = (externalGapGroupCount_ >= 0) ? static_cast<double>(externalGapGroupCount_)
+                                                   : static_cast<double>(gapGroups_.size());
+    if (g <= 0.0) return 1.0;
+    if (g >= 4.0) {
+        return 1.0 / (3.0 * g);
+    }
+    return (4.0 - g) / 4.0;
+}
+
+// ---------- rawLeadingPlayer ----------
+
+/**
+ * @brief The player with the most raw cells in this fill (0 if none). Boost-independent, so it is a
+ *        stable basis for classifying a gap as an internal seam (neighbour shares this leader) vs
+ *        external — used by mergeFills to compute the external gap count that feeds the boost,
+ *        without the circularity that using the boosted dominant would introduce.
+ */
+size_t Fill::rawLeadingPlayer() const {
+    size_t best = 0, bestCount = 0;
+    for (const auto& kv : playerCellCount_) {
+        if (kv.second > bestCount) { bestCount = kv.second; best = kv.first; }
+    }
+    return best;
+}
+
+// ---------- setExternalGapGroupCount ----------
+
+void Fill::setExternalGapGroupCount(size_t count) {
+    externalGapGroupCount_ = static_cast<int>(count);
+}
+
+// ---------- walledBoostFactor ----------
+
+/**
+ * @brief The effective multiplier applied to an encloser's cell count in getDominantPlayer.
+ *        Interpolates from 1.0 (no boost) up to isWalledMultiplier (full boost) by the gap weight
+ *        gapReductionFactor(): no gaps -> full boost, more gaps -> attenuated toward 1.0. Always
+ *        >= 1.0 (a boost, never a penalty). Single source of truth shared by getDominantPlayer (the
+ *        actual boost) and closureCouldMatter (deciding whether the boost can change the owner).
+ */
+double Fill::walledBoostFactor() const {
+    const Config& config = AppConfig::get();
+    return 1.0 + (config.isWalledMultiplier - 1.0) * gapReductionFactor();
+}
+
+// ---------- closureCouldMatter ----------
+
+/**
+ * @brief Cheap guard: returns true iff computing this fill's closure could change the result of
+ *        getDominantPlayer (so checkClosureOwner is worth running). Closure only enters
+ *        getDominantPlayer as the encloser factor F = walledBoostFactor() (always >= 1 — a boost,
+ *        never a penalty); it never changes raw investment shares.
+ *
+ *        Reasoning: the contested gate uses raw shares, and at most ONE player can exceed
+ *        contestedOwnershipThreshold (>1/2 of investment), so only that player M can ever own the
+ *        fill — everyone else fails the contested gate regardless of closure. If no such M exists
+ *        the fill is unowned either way → skip. If M exists, closure can only flip the outcome when
+ *        applying F to an encloser crosses a decision boundary:
+ *          (a) lift  — M fails the ownership gate unboosted but clears it boosted;
+ *          (c) steal — a boosted minority outranks M (becomes argmax) and, failing the contested
+ *                      gate, zeroes the fill (bounded by the top minority).
+ *        (A "drop" — F pulling M back under the ownership gate — cannot happen while F >= 1; the
+ *        symmetric check below would still catch it if the factor formula ever went sub-1 again.)
+ *        If neither can happen, the owner is identical with or without closure → skip. Sound: it
+ *        only ever returns false when the result is provably unchanged.
+ */
+bool Fill::closureCouldMatter() const {
+    if (cells_.empty()) return false;
+
+    const Config& config = AppConfig::get();
+    const double ownershipThreshold = config.ownershipThreshold;
+    const double contestedOwnershipThreshold = config.contestedOwnershipThreshold;
+    const double F = walledBoostFactor(); // exact effective encloser factor (shared with getDominantPlayer)
+
+    size_t total = 0, rawMax = 0, rawSecond = 0;
+    for (const auto& kv : playerCellCount_) {
+        total += kv.second;
+        if (kv.second > rawMax) { rawSecond = rawMax; rawMax = kv.second; }
+        else if (kv.second > rawSecond) { rawSecond = kv.second; }
+    }
+    if (total == 0) return false;
+
+    // Only the unique >contested-share player M can ever own the fill; closure can't change shares.
+    if (static_cast<double>(rawMax) / static_cast<double>(total) <= contestedOwnershipThreshold) {
+        return false;
+    }
+
+    const double cellsD = static_cast<double>(cells_.size());
+    const double mFrac = static_cast<double>(rawMax) / cellsD;        // M's unboosted ownership fraction
+    const double mFracBoosted = mFrac * F;                            // M's fraction if M encloses
+
+    // (a) lift / (b) drop: closure flips M across the ownership gate in either direction.
+    if ((mFrac <= ownershipThreshold) != (mFracBoosted <= ownershipThreshold)) return true;
+    // (c) steal-to-zero: a boosted top-minority could overtake M and zero the fill.
+    if (static_cast<double>(rawSecond) * F > static_cast<double>(rawMax)) return true;
+
+    return false;
 }
 
 const std::vector<Position>& Fill::getCells() const { return cells_; }
@@ -1178,7 +1300,7 @@ static void fillConnectedGapSets(
                 fills[ri].removeConnectedGapSet(connectedSet);
             }
             if (!bridgeFill.getCells().empty()) {
-                std::cout << "fill pushed back: " << fills.size() << std::endl;
+                // std::cout << "fill pushed back: " << fills.size() << std::endl;
                 fills.push_back(std::move(bridgeFill));
             }
         }
@@ -1198,7 +1320,6 @@ static void mergeFills(
     const std::vector<std::vector<std::vector<bool>>>& localObstructionBoards,
     const std::vector<std::vector<bool>>&  obstructionsBoard,
     const std::vector<std::vector<size_t>>* WalkableTerrainBoard,
-    const std::vector<std::vector<bool>>& dilatedWalls,
     int width,
     int height,
     size_t numPlayers)
@@ -1215,24 +1336,48 @@ static void mergeFills(
         preMergeDominantOwners[fi] = fills[fi].getDominantPlayer();
     }
 
+    // External-gap count for the gap penalty (walledBoostFactor -> gapReductionFactor). Classify
+    // each fill's gaps against RAW-LEADING players: a gap into a fill with the same raw leader is an
+    // internal seam (e.g. into a same-owner bridge fill) and must NOT penalise the boost; only real
+    // openings count. Raw leaders are boost-independent, so this breaks the circularity (the penalty
+    // feeds the boost, the boost would otherwise decide the owner used to classify). Done BEFORE the
+    // closure-guard loop so closureCouldMatter() sees the corrected (external-only) factor.
+    std::vector<size_t> rawLeaderByFill(fills.size(), 0);
+    for (size_t fi = 0; fi < fills.size(); ++fi) {
+        rawLeaderByFill[fi] = fills[fi].rawLeadingPlayer();
+    }
+    for (size_t fi = 0; fi < fills.size(); ++fi) {
+        fills[fi].setExternalGapGroupCount(
+            countExternalGapGroups(fills[fi], rawLeaderByFill[fi], cellsToFill, rawLeaderByFill));
+    }
+
     auto mFStart = std::chrono::high_resolution_clock::now();
 
     // Rigorous closure test: determine which player (if any) unambiguously
     // encloses this fill via an unbroken boundary chain.
     // Step 4a - Compute closure owner before merge decisions so
     // getDominantPlayer() uses current closure information.
+    // Optimisation: checkClosureOwner is an expensive boundary trace, and closure only feeds the
+    // walled boost in getDominantPlayer. closureCouldMatter() cheaply rules out fills whose owner
+    // is identical with or without the boost (e.g. no >contested-share player, or a clear owner),
+    // so we skip the trace for them and set an empty closure (must overwrite any stale closure on
+    // reused fills in the incremental global-tail).
     for (size_t fi = 0; fi < fills.size(); ++fi) {
-        fills[fi].setClosure(checkClosureOwner(
-            fills[fi],
-            localObstructionBoards,
-            obstructionsBoard,
-            WalkableTerrainBoard,
-            width,
-            height,
-            numPlayers,
-            &fills,
-            &preMergeDominantOwners,
-            static_cast<int>(fi)));
+        if (fills[fi].closureCouldMatter()) {
+            fills[fi].setClosure(checkClosureOwner(
+                fills[fi],
+                localObstructionBoards,
+                obstructionsBoard,
+                WalkableTerrainBoard,
+                width,
+                height,
+                numPlayers,
+                &fills,
+                &preMergeDominantOwners,
+                static_cast<int>(fi)));
+        } else {
+            fills[fi].setClosure(ClosureResult{});
+        }
 
         // if (config.testingMode && !fills[fi].getClosure().empty()) {
             const ClosureResult& fc = fills[fi].getClosure();
@@ -1245,8 +1390,6 @@ static void mergeFills(
 
         if(config.testingMode && fi >= 3) {
             std::cout << "Fill " << fi << " after gap detection:" << std::endl;
-            std::cout << "Dilated walls after " << fi << " gap detection:" << std::endl;
-            printBoard(dilatedWalls); // For config.testingMode
             std::cout << std::endl;
 
             // std::cout << "visited cells after gap detection:" << std::endl;
@@ -1315,18 +1458,61 @@ static void mergeFills(
     // std::cout << "merge fill second half time taken: " << mFTime.count() << "ms" << std::endl;
 }
 
+// ---------- countExternalGapGroups ----------
+
+/**
+ * @brief Counts the EXTERNAL gap groups of a single fill. A gap group is INTERNAL (a seam, ignored)
+ *        iff myDominant is a real owner (non-zero) AND every one of the group's cells resolves —
+ *        via cellsToFill — to a fill whose dominant player equals myDominant. Any other gap group is
+ *        EXTERNAL: it opens onto a different owner, an unowned fill, or off the board (-1).
+ *
+ *        Classification is PER-FILL and keys on the same dominant PLAYER (not on group id), so a
+ *        connected same-owner region can be PARTIALLY owned: an interior sub-fill walled off behind
+ *        only internal seams has zero external gaps and survives the threshold even if a sibling
+ *        sub-fill with the same owner leaks. dominantByFill must hold each fill's owner (0 = none),
+ *        snapshotted before any closure is cleared (clearing closure changes getDominantPlayer).
+ */
+size_t countExternalGapGroups(const Fill& fill,
+                              size_t myDominant,
+                              const std::vector<std::vector<int>>& cellsToFill,
+                              const std::vector<size_t>& dominantByFill)
+{
+    size_t external = 0;
+    for (const auto& gg : fill.getGapGroups()) {
+        const bool allInternal = (myDominant != 0) && std::all_of(gg.begin(), gg.end(),
+            [&](const Position& gp) {
+                const int other = cellsToFill[gp.first][gp.second];
+                return other >= 0
+                    && other < static_cast<int>(dominantByFill.size())
+                    && dominantByFill[other] == myDominant;
+            });
+        if (!allInternal) ++external;
+    }
+    return external;
+}
+
 // ---------- removeShapesByGapThreshold ----------
 
 /**
- * @brief Shape filter (step 5), run after grouping. For each fill, counts its EXTERNAL gap groups
- *        — a gap group is internal (ignored) iff every one of its cells maps, via cellsToFill, to a
- *        fill in the SAME group; otherwise it is external. This is the non-destructive replacement
- *        for removeInternalGapGroups, computed against the final groupIds. A fill is dropped if its
- *        external gap count exceeds CLOSED_SHAPE_GAPS_THRESHOLD. (The singleton-group <4-cell
- *        "noise" drop was removed — it was eating small bridge fills that hold real gap groups.)
+ * @brief Gap-threshold closure gate (step 5), run after grouping. PER-FILL: for each fill we count
+ *        its own EXTERNAL gap groups (see countExternalGapGroups — internal seams are gaps into a
+ *        fill with the SAME dominant player). A fill whose external gap count exceeds
+ *        CLOSED_SHAPE_GAPS_THRESHOLD is an OPEN shape, so it is denied the closure test: we clear its
+ *        encloser set, removing any walled boost in getDominantPlayer. The fill is NOT erased — it
+ *        can still be owned by raw presence.
  *
- *        cellsToFill must still index the live fills vector (true here: nothing has reordered fills
- *        since mergeFills stamped the groupIds), so we compute all external counts before erasing.
+ *        Per-fill (NOT per-group) is deliberate: ownership is per fill, so a connected same-owner
+ *        region can be partially owned. An interior sub-fill behind only internal seams (e.g. all
+ *        its gaps lead into a same-owner bridge fill) keeps its closure even when a sibling sub-fill
+ *        of the same owner leaks past the threshold; only the leaking fill is denied. Dominants are
+ *        snapshotted up front because clearing a closure changes getDominantPlayer.
+ *
+ *        Why no erase (this function historically dropped fills — hence the name): erasing compacted
+ *        the fills vector WITHOUT remapping cellsToFill, so the returned fillAssignmentBoard went
+ *        stale (indices no longer matched the compacted fills). Re-running the tail on that board
+ *        (the fast-path flip global-tail) then mis-resolved gap-neighbour lookups → fills wrongly
+ *        dropped far from the change. Never compacting keeps cellsToFill consistent, so the tail is
+ *        idempotent and re-runs match a full recompute. (cellsToFill stays const.)
  */
 static void removeShapesByGapThreshold(std::vector<Fill>& fills,
                                        const std::vector<std::vector<int>>& cellsToFill)
@@ -1335,38 +1521,20 @@ static void removeShapesByGapThreshold(std::vector<Fill>& fills,
     const size_t gapThreshold = static_cast<size_t>(config.CLOSED_SHAPE_GAPS_THRESHOLD);
     const int n = static_cast<int>(fills.size());
 
-    // fill index -> groupId.
-    std::vector<int> fillGroup(n, -1);
+    // Snapshot each fill's dominant BEFORE clearing any closure (clearing changes getDominantPlayer).
+    // Internal seams are classified against these owners.
+    std::vector<size_t> dominantByFill(n, 0);
     for (int i = 0; i < n; ++i) {
-        fillGroup[i] = fills[i].getGroupId();
+        dominantByFill[i] = fills[i].getDominantPlayer();
     }
 
-    // External gap group: at least one of its cells points (via cellsToFill) to a fill
-    // outside this fill's group (or to no fill at all / an opening).
-    auto externalGapCount = [&](int fi) -> size_t {
-        const int myGroup = fillGroup[fi];
-        size_t count = 0;
-        for (const auto& gg : fills[fi].getGapGroups()) {
-            const bool allInternal = std::all_of(gg.begin(), gg.end(),
-                [&](const Position& gp) {
-                    const int other = cellsToFill[gp.first][gp.second];
-                    return other >= 0 && other < n && fillGroup[other] == myGroup;
-                });
-            if (!allInternal) ++count;
+    // Per-fill: deny closure to any fill whose own external gap count exceeds the threshold.
+    // Keep the fill (no erase → cellsToFill stays valid).
+    for (int i = 0; i < n; ++i) {
+        if (countExternalGapGroups(fills[i], dominantByFill[i], cellsToFill, dominantByFill) > gapThreshold) {
+            fills[i].setClosure(ClosureResult{});
         }
-        return count;
-    };
-
-    // Decide drops up front (indices stay valid until we erase).
-    std::vector<char> drop(n, 0);
-    for (int i = 0; i < n; ++i) {
-        drop[i] = (externalGapCount(i) > gapThreshold) ? 1 : 0;
     }
-
-    int idx = 0;
-    fills.erase(std::remove_if(fills.begin(), fills.end(),
-        [&](const Fill&) { return drop[idx++] == 1; }),
-        fills.end());
 }
 
 // ---------- keepOnlyGapConnected ----------
@@ -1697,7 +1865,7 @@ static void gapAnalysisAndDilationConversion(
             // Dead-end branch: convert all dilation cells to fill cells
             dilToConvert.insert(dilToConvert.end(),
                 componentDilCells.begin(), componentDilCells.end());
-                // AK: Keep track of the building though? Not implemented here yet.
+                // AK: Keep track of the obstruction though? Not implemented here yet.
         } else {
             if(config.testingMode) {
                 
@@ -1797,6 +1965,7 @@ static void floodFill(
     // scattered Fill mutations.
     std::vector<std::pair<int, int>> mapEdgeCellsToAdd;
     std::vector<Position> dilationCellsToAdd;
+    std::vector<Position> boundaryCellsToAdd; // cur cells found to be 4-adjacent to a dilation wall
 
     visited[startX][startY] = true;
     if (WalkableTerrainBoard != nullptr) {
@@ -1813,6 +1982,8 @@ static void floodFill(
         const size_t cellX = cur.first;
         const size_t cellY = cur.second;
 
+        bool curIsBoundary = false; // does cur touch a dilation wall? (→ it's a boundary cell)
+
         // Check 4-neighbors
         for (int d = 0; d < 4; d++) {
             int nextX = static_cast<int>(cellX) + dx4[d];
@@ -1827,9 +1998,11 @@ static void floodFill(
                 continue; // block expansion into different terrain type
             }
 
-            // Record adjacent dilation cells (excluding original obstructions)
+            // Record adjacent dilation cells (excluding original obstructions). cur is then a
+            // boundary cell of its interior group — captured for free, no separate re-search.
             if (dilatedWalls[nextX][nextY] && !obstructionsBoard[nextX][nextY]) {
                 dilationCellsToAdd.push_back({static_cast<size_t>(nextX), static_cast<size_t>(nextY)});
+                curIsBoundary = true;
             }
 
             // Expand BFS into non-obstruction, non-dilation, unvisited cells
@@ -1838,6 +2011,8 @@ static void floodFill(
                 q.push_back({static_cast<size_t>(nextX), static_cast<size_t>(nextY)});
             }
         }
+
+        if (curIsBoundary) boundaryCellsToAdd.push_back(cur);
     }
     auto end_time = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
@@ -1857,6 +2032,9 @@ measureAndLogExecutionTime<int>("Step 2b. batch register cells and map edge cell
         fillIdx);
     return 0;
     }) );
+
+    // Store the interior-group boundary recorded during the BFS (one group per fill).
+    fill.setBoundaryCells(std::move(boundaryCellsToAdd));
     
 }
 
@@ -1944,7 +2122,8 @@ static void renderFillStep(
     const std::vector<Fill>* fills,
     const std::vector<std::vector<int>>* floodOnly,
     bool showGaps,
-    const std::string& subDir = "initialiseFillSteps")
+    const std::string& subDir = "initialiseFillSteps",
+    bool dilationOnlyEmpty = false) // only paint dilation where nothing else is (fill/obstr/gap/water)
 {
     const Config& config = AppConfig::get();
 
@@ -1962,32 +2141,70 @@ static void renderFillStep(
         return c;
     };
 
+    // Each fill gets a distinct green shade keyed by its index so adjacent fills are visually
+    // distinguishable across every step (not just the flood step). NB: std::hash<int> is identity
+    // on libstdc++, so we must explicitly scramble the index (multiplicative + xor-shift) —
+    // otherwise consecutive indices map to near-identical colours.
+    auto fillShade = [](int idx) -> cv::Vec4b {
+        uint32_t h = static_cast<uint32_t>(idx) * 2654435761u + 0x9E3779B9u;
+        h ^= h >> 13; h *= 0x85EBCA6Bu; h ^= h >> 16;
+        return cv::Vec4b(
+            static_cast<uchar>(40  + ( h        % 150)),  // B 40–189
+            static_cast<uchar>(150 + ((h >> 8)  % 106)),  // G 150–255 (green stays dominant)
+            static_cast<uchar>(40  + ((h >> 16) % 150)),  // R 40–189
+            255);
+    };
+
     cv::Mat mat(width, height, CV_8UC4, cv::Scalar(0, 0, 0, 255));
 
     // Layer 1 (lowest): fill cells.
     if (floodOnly) {
-        const cv::Vec4b floodColour(120, 200, 120, 255); // light green — "all fills one colour"
         for (int x = 0; x < width; ++x)
             for (int y = 0; y < height; ++y)
-                if ((*floodOnly)[x][y] >= 0) mat.at<cv::Vec4b>(x, y) = floodColour;
+                if ((*floodOnly)[x][y] >= 0)
+                    mat.at<cv::Vec4b>(x, y) = fillShade((*floodOnly)[x][y]);
     } else if (fills) {
+        // Owned fills show the owner's (tinted) colour so ownership reads at the closure step;
+        // unowned fills keep their distinct per-fill green shade so the fills stay visible
+        // throughout (rather than collapsing to flat grey).
+        int fi = 0;
         for (const auto& f : *fills) {
             const size_t dp = f.getDominantPlayer();
-            const cv::Vec4b col = (dp > 0) ? playerBGRA(static_cast<int>(dp), true)
-                                           : cv::Vec4b(110, 110, 110, 255); // unowned fill = grey
+            const cv::Vec4b col = (dp > 0) ? playerBGRA(static_cast<int>(dp), true) : fillShade(fi);
             for (const auto& cell : f.getCells())
                 if (static_cast<int>(cell.first) < width && static_cast<int>(cell.second) < height)
                     mat.at<cv::Vec4b>(cell.first, cell.second) = col;
+            ++fi;
         }
     }
 
-    // Layer 2: dilation walls.
+    // Layer 2: dilation walls (orange). When dilationOnlyEmpty is set (the ground-truth image,
+    // where initialiseFill doesn't hand back the post-conversion dilation), a dilation cell is
+    // painted only if nothing else already occupies it — not a fill (mat still black here, since
+    // the fill layer ran first), obstruction, gap cell, or water. That makes the dead-end dilation
+    // (now fill) and gap-bordering dilation (now gap cells) drop out, matching the final state.
     if (dilated && !dilated->empty()) {
         const cv::Vec4b dilCol(0, 140, 255, 255); // orange (BGR)
+
+        std::unordered_set<Position, PositionHash> gapSet;
+        if (dilationOnlyEmpty && fills) {
+            for (const auto& f : *fills)
+                for (const auto& gg : f.getGapGroups())
+                    for (const auto& c : gg) gapSet.insert(c);
+        }
         for (int x = 0; x < width; ++x)
-            for (int y = 0; y < height; ++y)
-                if ((*dilated)[x][y] && masterObstructionBoard[x][y] == -1)
-                    mat.at<cv::Vec4b>(x, y) = dilCol;
+            for (int y = 0; y < height; ++y) {
+                if (!(*dilated)[x][y] || masterObstructionBoard[x][y] != -1) continue;
+                if (dilationOnlyEmpty) {
+                    const cv::Vec4b cur = mat.at<cv::Vec4b>(x, y);
+                    if (cur[0] != 0 || cur[1] != 0 || cur[2] != 0) continue;        // already a fill
+                    if (gapSet.count({static_cast<size_t>(x), static_cast<size_t>(y)})) continue; // gap
+                    if (walkable && x < static_cast<int>(walkable->size())
+                        && y < static_cast<int>((*walkable)[x].size())
+                        && (*walkable)[x][y] == 0) continue;                          // water
+                }
+                mat.at<cv::Vec4b>(x, y) = dilCol;
+            }
     }
 
     // Layer 3: water / non-walkable terrain.
@@ -2024,11 +2241,42 @@ static void renderFillStep(
     cv::rotate(mat, rotated, cv::ROTATE_90_COUNTERCLOCKWISE);
     cv::resize(rotated, scaled, cv::Size(), 6, 6, cv::INTER_NEAREST);
 
+    // Footer: a grey strip below the board naming the current step.
+    // Format: "(image#) Step step#: description". Centralised here so call sites stay clean;
+    // any file not in the map falls back to its name with underscores → spaces.
+    static const std::unordered_map<std::string, std::string> kStepLabels = {
+        {"1_init",                "(1) Step 0: Initialise"},
+        {"2_dilated",             "(2) Step 1: Dilate"},
+        {"3_pass1_flood",         "(3) Step 2: Flood fill"},
+        {"4_pass2_gaps",          "(4) Step 3: Identify gaps"},
+        {"5_after_3b_bridges",    "(5) Step 3b: Bridge gaps"},
+        {"6_after_4_merge",       "(6) Step 4: Closure analysis and fill ownership"},
+        {"7_after_5_threshold",   "(7) Step 5: Cull open shapes"},
+    };
+    const int footerH = 48;
+    cv::Mat labeled(scaled.rows + footerH, scaled.cols, CV_8UC4, cv::Scalar(55, 55, 55, 255));
+    scaled.copyTo(labeled(cv::Rect(0, 0, scaled.cols, scaled.rows)));
+    std::string labelText;
+    if (auto it = kStepLabels.find(fileName); it != kStepLabels.end()) {
+        labelText = it->second;
+    } else {
+        labelText = fileName;
+        std::replace(labelText.begin(), labelText.end(), '_', ' ');
+    }
+    const double fontScale = 0.9;
+    const int fontThickness = 2;
+    int baseline = 0;
+    const cv::Size ts = cv::getTextSize(labelText, cv::FONT_HERSHEY_SIMPLEX, fontScale, fontThickness, &baseline);
+    const cv::Point org(std::max(8, (labeled.cols - ts.width) / 2),
+                        scaled.rows + (footerH + ts.height) / 2);
+    cv::putText(labeled, labelText, org, cv::FONT_HERSHEY_SIMPLEX, fontScale,
+                cv::Scalar(235, 235, 235, 255), fontThickness, cv::LINE_AA);
+
     const std::filesystem::path dir =
         std::filesystem::path(config.outputDirectory) / subDir;
     std::error_code ec;
     std::filesystem::create_directories(dir, ec);
-    cv::imwrite((dir / (fileName + ".png")).string(), scaled);
+    cv::imwrite((dir / (fileName + ".png")).string(), labeled);
 }
 
 // ---------- completeBoardFill ----------
@@ -2095,6 +2343,25 @@ static void completeBoardFill(
             return 0;
         }) );
     }
+
+    // Interior-group boundary cells are recorded during floodFill (Pass 1) — no separate pass.
+}
+
+// ---------- collectInteriorGroups ----------
+
+// Builds one self-contained InteriorGroup per fill ({cells, boundaryCells}) from the fills'
+// flood-recorded boundary. Self-contained (owns its cells) so the caller (TerritoryAnalyser) can
+// persist them independently of the transient per-update fills.
+static std::vector<InteriorGroup> collectInteriorGroups(const std::vector<Fill>& fills) {
+    std::vector<InteriorGroup> groups;
+    groups.reserve(fills.size());
+    for (const auto& f : fills) {
+        InteriorGroup g;
+        g.cells = f.getCells();
+        g.boundaryCells = f.getBoundaryCells();
+        groups.push_back(std::move(g));
+    }
+    return groups;
 }
 
 // ---------- initialiseFill ----------
@@ -2220,7 +2487,7 @@ FillResult initialiseFill(
 
     // Step 4 – Merge Fills that share gap groups with the same dominant player
     measureAndLogExecutionTime<int>("Step 4. merge fills",
-        std::function<int()>([&]() { mergeFills(fills, cellsToFill, localObstructionBoards, obstructionsBoard, WalkableTerrainBoard, dilatedWalls, width, height, numPlayers); return 0; })
+        std::function<int()>([&]() { mergeFills(fills, cellsToFill, localObstructionBoards, obstructionsBoard, WalkableTerrainBoard, width, height, numPlayers); return 0; })
     );
 
     if (dumpSteps) {
@@ -2258,6 +2525,18 @@ FillResult initialiseFill(
     if (dumpSteps) {
         renderFillStep("7_after_5_threshold", width, height, masterPlayerObstructionBoard,
                        WalkableTerrainBoard, &dilatedWalls, &fills, nullptr, true);
+
+        // Assemble the numbered step images, in order, into output/initialiseFillSteps/analyseFill.gif
+        // (via python3 + PIL — present in this environment; fails silently otherwise).
+        const std::string py =
+            "import os;from PIL import Image;"
+            "d=os.path.join('" + config.outputDirectory + "','initialiseFillSteps');"
+            "fs=sorted([f for f in os.listdir(d) if f.endswith('.png') and f[0].isdigit()],"
+            "key=lambda f:int(f.split('_')[0]));"
+            "ims=[Image.open(os.path.join(d,f)).convert('RGB') for f in fs];"
+            "ims[0].save(os.path.join(d,'analyseFill.gif'),save_all=True,append_images=ims[1:],"
+            "duration=1200,loop=0) if ims else None";
+        std::system(("python3 -c \"" + py + "\" 2>/dev/null").c_str());
     }
 
     // Step 6 and Step 7 – Collect gaps and encode dominant player fills
@@ -2315,9 +2594,9 @@ FillResult initialiseFill(
     }
     
         // Print board showing fill index per cell (-1 = unclaimed/obstruction)
-        std::cout << "Fill Index Board:" << std::endl;
-        printBoard(cellsToFill);
-        std::cout << std::endl;
+        // std::cout << "Fill Index Board:" << std::endl;
+        // printBoard(cellsToFill);
+        // std::cout << std::endl;
 
         // Print all gap cells grouped by fill index
         std::cout << "Gap cells by fill index:" << std::endl;
@@ -2339,6 +2618,7 @@ FillResult initialiseFill(
     result.fills = std::move(fills);
     result.gaps = std::move(allGaps);
     result.fillAssignmentBoard = std::move(cellsToFill);
+    result.interiorGroups = collectInteriorGroups(result.fills);
     return result;
 }
 
@@ -2346,7 +2626,7 @@ FillResult initialiseFill(
 // ---------- updateFill ----------
 
 /**
- * @brief Performs an incremental fill update after a single building is added or removed.
+ * @brief Performs an incremental fill update after a single obstruction is added or removed.
  *
  * Fast path (isFastPath = true): for an "add", evicts any footprint cells from the
  * fills they currently belong to and zeros out their fillBoard/fillAssignmentBoard
@@ -2359,9 +2639,9 @@ FillResult initialiseFill(
  * Slow path (isFastPath = false): falls back to a full initialiseFill() recomputation
  * to handle topology changes (fill splits, merges, and new closures).
  *
- * @param footprintX/Y/W/H    Position and size of the changed building footprint.
+ * @param footprintX/Y/W/H    Position and size of the changed obstruction footprint.
  * @param influenceExtent      Chebyshev radius used for eviction boundary checks.
- * @param isFastPath           True if no other building is within Chebyshev-2 of footprint.
+ * @param isFastPath           True if no other obstruction is within Chebyshev-2 of footprint.
  * @param mod                  "add" or "remove".
  * @param fills                Current Fill objects (passed by value; modified for fast path).
  * @param fillAssignmentBoard  Cell->fill-index map (-1 = unclaimed); modified for fast path.
@@ -2398,10 +2678,39 @@ FillResult updateFill(
            + "_" + (isFastPath ? "fast" : "slow"))
         : std::string();
 
+    // Ground-truth comparison: render a full from-scratch initialiseFill on the same post-update
+    // board state into this call's folder, so the incremental step images can be eyeballed against
+    // what a full recompute produces (the same oracle validateAgainstFullRecompute diffs against).
+    if (dumpUF) {
+        const int gtW = static_cast<int>(masterObstructionBoard.size());
+        const int gtH = gtW > 0 ? static_cast<int>(masterObstructionBoard[0].size()) : 0;
+        FillResult gt = initialiseFill(plLocalTerritories, masterObstructionBoard,
+                                       playerObstructionBoards, numPlayers,
+                                       WalkableTerrainBoard, defeatedPlayers);
+        std::vector<std::vector<bool>> gtObstr(gtW, std::vector<bool>(gtH, false));
+        for (int x = 0; x < gtW; ++x)
+            for (int y = 0; y < gtH; ++y)
+                gtObstr[x][y] = (masterObstructionBoard[x][y] != -1);
+        std::vector<std::vector<bool>> gtDilated =
+            dilateObstructionsAndTerrain(gtObstr, WalkableTerrainBoard, gtW, gtH);
+        renderFillStep("9_groundtruth_initialiseFill", gtW, gtH, masterObstructionBoard,
+                       WalkableTerrainBoard, &gtDilated, &gt.fills, nullptr, true, ufDir,
+                       /*dilationOnlyEmpty=*/true);
+    }
+
     if (!isFastPath) {
+        // SLOW PATH — currently a full recompute, which is the oracle baseline and therefore
+        // structurally faithful by definition (instantly kills the slow-path gap/over-claim bugs).
+        // The scoped region-reprocess below is PRESERVED for a future optimization (TBD: a custom
+        // local reflood, or adapt initialiseFill to reflood only affected fills — see
+        // medium_path_handover.md), but it diverges from a full recompute so it stays disabled.
+        return initialiseFill(plLocalTerritories, masterObstructionBoard,
+                              playerObstructionBoards, numPlayers,
+                              WalkableTerrainBoard, defeatedPlayers);
+
         // Slow path: reprocess only fills that overlap the DSU group bounds.
-        // The DSU group bounds cover the bounding box of all buildings in the
-        // connected cluster that the modified building belongs to.  Only fills
+        // The DSU group bounds cover the bounding box of all obstructions in the
+        // connected cluster that the modified obstruction belongs to.  Only fills
         // inside that region can have changed topology; everything outside is untouched.
 
         const int width  = static_cast<int>(masterObstructionBoard.size());
@@ -2539,7 +2848,7 @@ FillResult updateFill(
         fillConnectedGapSets(fills, fillAssignmentBoard, plLocalTerritories,
                              WalkableTerrainBoard, width, height);
         mergeFills(fills, fillAssignmentBoard, playerObstructionBoards,  obstrBoard,
-                   WalkableTerrainBoard, dilatedWalls, width, height, numPlayers);
+                   WalkableTerrainBoard, width, height, numPlayers);
         if (dumpUF) renderFillStep("4_after_merge", width, height, masterObstructionBoard,
                                    WalkableTerrainBoard, &dilatedWalls, &fills, nullptr, true, ufDir);
 
@@ -2554,6 +2863,7 @@ FillResult updateFill(
         result.fills               = std::move(fills);
         result.gaps                = std::move(allGaps);
         result.fillAssignmentBoard = std::move(fillAssignmentBoard);
+        result.interiorGroups      = collectInteriorGroups(result.fills);
         return result;
     }
 
@@ -2569,6 +2879,15 @@ FillResult updateFill(
 
     if (dumpUF) renderFillStep("1_incoming", width, height, masterObstructionBoard,
                                WalkableTerrainBoard, nullptr, &fills, nullptr, true, ufDir);
+
+    // Fast REMOVE is incremental (no full-recompute fallback). The earlier over-claim — freed
+    // footprint cells landing in a fill that a full recompute left unclaimed — was caused by the
+    // gap threshold ERASING that surrounding open region: fresh dropped it, the ring-scan kept it.
+    // Now that the threshold CLEARS CLOSURE instead of erasing (removeShapesByGapThreshold), fresh
+    // keeps the region too, so the (b) registration below matches a full recompute. The freed
+    // footprint cells flood into the single surrounding fill (an isolated obstruction's dilation ring
+    // was already dead-end-converted into that fill), and a flip routes through the same global-tail
+    // as add. Verified by the oracle.
 
     // Influence bbox: the only region where territory values (hence fill counts) can change.
     const int iinfX    = static_cast<int>((footprintX > influenceExtent) ? footprintX - influenceExtent : 0);
@@ -2598,7 +2917,7 @@ FillResult updateFill(
             }
         }
         // Widened count update: EVERY fill overlapping the influence bbox, not just footprint-
-        // touchers — the isolated building's influence bleeds beyond its footprint. One
+        // touchers — the isolated obstruction's influence bleeds beyond its footprint. One
         // evictCellsInFootprint call per overlapping fill both removes footprint cells (touchers)
         // and delta-updates influence-area counts (the rest).
         for (size_t i = 0; i < fills.size(); ++i) {
@@ -2609,7 +2928,7 @@ FillResult updateFill(
     } else {
         // "remove" fast path:
         // (a) Influence-area delta pass over overlapping fills (their bitmask values changed
-        //     now that the building's influence is gone).
+        //     now that the obstruction's influence is gone).
         for (size_t i = 0; i < fills.size(); ++i) {
             if (!overlapsInfluence(fills[i])) continue;
             fills[i].evictCellsInFootprint(footprintX, footprintY, footprintW, footprintH,
@@ -2662,25 +2981,38 @@ FillResult updateFill(
     }
 
     if (anyFlip) {
-        // Ownership changed: rebuild groups, external-gap thresholds, and encoding from the
-        // existing fills (steps 3b–7 of initialiseFill), with NO re-flood. The footprint
-        // state updates above already adjusted membership/counts; this only redoes the
-        // ownership-derived layers.
+        // Ownership flipped → rebuild the ownership-derived layers GLOBALLY over the existing
+        // fills (no re-flood; topology is unchanged for an isolated add). This is faithful because:
+        //   Part 1 — the influence-delta loop above updated cell attributes for EVERY influence-
+        //            bbox fill, so a ranged obstruction that bleeds across walls into multiple fills
+        //            has all of them refreshed;
+        //   Part 2 — mergeFills/encode below recompute getDominantPlayer for all those fills;
+        //   Part 3 — grouping + threshold + encode run GLOBALLY (a flip's grouping effect can reach
+        //            any fill, so we don't scope it). Cheap: ~dilate + closure + encode, no flood.
         std::vector<std::vector<bool>> obstrBoard(width, std::vector<bool>(height, false));
         for (int x = 0; x < width; ++x)
             for (int y = 0; y < height; ++y)
                 obstrBoard[x][y] = (masterObstructionBoard[x][y] != -1);
-        std::vector<std::vector<bool>> dilatedWalls =
-            dilateObstructionsAndTerrain(obstrBoard, WalkableTerrainBoard, width, height);
 
-        fillConnectedGapSets(fills, fillAssignmentBoard, plLocalTerritories,
-                             WalkableTerrainBoard, width, height);
+        std::cout << std::endl;
+        std::cout << std::endl;
+        std::cout << "[FAST-PATH FLIP] dilating walls for global-tail rebuild..." << std::endl;
+        std::cout << std::endl;
+        std::cout << std::endl;
+        std::cout << std::endl;
+        // std::vector<std::vector<bool>> dilatedWalls =
+        //     dilateObstructionsAndTerrain(obstrBoard, WalkableTerrainBoard, width, height);
+
+        // fillConnectedGapSets(fills, fillAssignmentBoard, plLocalTerritories,
+        //                      WalkableTerrainBoard, width, height);
+        
+        // Why do we need dilatedWalls for mergeFills?
         mergeFills(fills, fillAssignmentBoard, playerObstructionBoards, obstrBoard,
-                   WalkableTerrainBoard, dilatedWalls, width, height, numPlayers);
+                   WalkableTerrainBoard, width, height, numPlayers);
         removeShapesByGapThreshold(fills, fillAssignmentBoard);
 
         if (dumpUF) renderFillStep("2_after_global_tail", width, height, masterObstructionBoard,
-                                   WalkableTerrainBoard, &dilatedWalls, &fills, nullptr, true, ufDir);
+                                   WalkableTerrainBoard, nullptr, &fills, nullptr, true, ufDir);
 
         FillResult result;
         std::vector<std::vector<Position>> allGaps =
@@ -2688,6 +3020,16 @@ FillResult updateFill(
         result.fills               = std::move(fills);
         result.gaps                = std::move(allGaps);
         result.fillAssignmentBoard = std::move(fillAssignmentBoard);
+
+        validateAgainstFullRecompute(result, "post-flip-fast-path", plLocalTerritories, masterObstructionBoard,
+                                    playerObstructionBoards, numPlayers, WalkableTerrainBoard, defeatedPlayers);
+
+        std::cout << std::endl;
+        std::cout << std::endl;
+        std::cout << "[FAST-PATH FLIP] completed global-tail rebuild; validated against full recompute." << std::endl;
+        std::cout << std::endl;
+        std::cout << std::endl;
+        std::cout << std::endl;
         return result;
     }
 
@@ -2717,6 +3059,7 @@ FillResult updateFill(
     result.gaps                = std::move(gaps);
     result.fillBoard           = std::move(fillBoard);
     result.fillAssignmentBoard = std::move(fillAssignmentBoard);
+    result.interiorGroups      = collectInteriorGroups(result.fills);
     return result;
 }
 
@@ -2796,9 +3139,88 @@ bool validateAgainstFullRecompute(
         }
     }
 
-    const bool ok = (fillBoardMismatches == 0 && gapMismatches == 0);
+    // --- 3. Fill-STRUCTURE diff (order-independent): partition + per-fill props ---
+    // fillBoard + gap-sets can match even when the fills vector differs structurally (e.g. a
+    // bridge fill present in one but not the other). Here we compare the actual partition of
+    // cells into fills, plus each fill's derived properties. A fill is canonically identified by
+    // its lexicographically-smallest cell, so identical membership yields the same label in both
+    // results regardless of flood order.
+    struct FillProps {
+        size_t dominant = 0;
+        std::set<size_t> closure;
+        std::set<Position> gapCells;
+    };
+    auto buildStructure = [](const std::vector<Fill>& fills,
+                             std::unordered_map<Position, Position, PositionHash>& cellToCanonical,
+                             std::map<Position, FillProps>& canonicalToProps) {
+        for (const Fill& f : fills) {
+            const auto& cells = f.getCells();
+            if (cells.empty()) continue;
+            Position canonical = cells.front();
+            for (const Position& c : cells) if (c < canonical) canonical = c;
+            for (const Position& c : cells) cellToCanonical[c] = canonical;
+            FillProps props;
+            props.dominant = f.getDominantPlayer();
+            props.closure = f.getClosure().enclosers;
+            for (const auto& gg : f.getGapGroups()) props.gapCells.insert(gg.begin(), gg.end());
+            canonicalToProps[canonical] = std::move(props);
+        }
+    };
+
+    std::unordered_map<Position, Position, PositionHash> incCell, freshCell;
+    std::map<Position, FillProps> incProps, freshProps;
+    buildStructure(incremental.fills, incCell, incProps);
+    buildStructure(fresh.fills, freshCell, freshProps);
+
+    // 3a. Partition: each claimed cell must belong to a fill with identical membership in both.
+    size_t partitionMismatches = 0;
+    int partReportsLogged = 0;
+    std::set<Position> allClaimed;
+    for (const auto& kv : incCell)   allClaimed.insert(kv.first);
+    for (const auto& kv : freshCell) allClaimed.insert(kv.first);
+    for (const Position& c : allClaimed) {
+        const auto i = incCell.find(c);
+        const auto f = freshCell.find(c);
+        const bool inInc = (i != incCell.end());
+        const bool inFresh = (f != freshCell.end());
+        if (!inInc || !inFresh || i->second != f->second) {
+            ++partitionMismatches;
+            if (partReportsLogged < 15) {
+                std::cout << "[VALIDATE " << label << "] fill-partition (" << c.first << "," << c.second << ") "
+                          << (inInc ? "in-fill" : "unclaimed") << " incremental vs "
+                          << (inFresh ? "in-fill" : "unclaimed") << " fresh"
+                          << ((inInc && inFresh) ? " (different fill membership)" : "") << std::endl;
+                ++partReportsLogged;
+            }
+        }
+    }
+
+    // 3b. Per-fill props (dominant / closure enclosers / gap-cell set) for fills present in both.
+    size_t fillPropMismatches = 0;
+    int propReportsLogged = 0;
+    for (const auto& [canonical, fp] : freshProps) {
+        const auto it = incProps.find(canonical);
+        if (it == incProps.end()) continue; // membership difference already counted in 3a
+        const FillProps& ip = it->second;
+        if (ip.dominant != fp.dominant || ip.closure != fp.closure || ip.gapCells != fp.gapCells) {
+            ++fillPropMismatches;
+            if (propReportsLogged < 15) {
+                std::cout << "[VALIDATE " << label << "] fill@(" << canonical.first << "," << canonical.second << ")"
+                          << " dominant inc=" << ip.dominant << " fresh=" << fp.dominant
+                          << ", closure-size inc=" << ip.closure.size() << " fresh=" << fp.closure.size()
+                          << ", gapCells inc=" << ip.gapCells.size() << " fresh=" << fp.gapCells.size()
+                          << std::endl;
+                ++propReportsLogged;
+            }
+        }
+    }
+
+    const bool ok = (fillBoardMismatches == 0 && gapMismatches == 0
+                     && partitionMismatches == 0 && fillPropMismatches == 0);
     std::cout << "[VALIDATE " << label << "] " << (ok ? "OK" : "*** MISMATCH ***")
               << " — fillBoard diffs: " << fillBoardMismatches
-              << ", gap-cell diffs: " << gapMismatches << std::endl;
+              << ", gap-cell diffs: " << gapMismatches
+              << ", partition diffs: " << partitionMismatches
+              << ", fill-prop diffs: " << fillPropMismatches << std::endl;
     return ok;
 }

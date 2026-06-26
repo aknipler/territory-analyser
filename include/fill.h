@@ -52,6 +52,16 @@ struct ClosureResult {
     bool empty() const { return enclosers.empty(); }
 };
 
+// A connected component of fill cells that are not 4-adjacent to any dilation wall
+// (i.e. more than one tile removed from any obstruction). Used to accelerate
+// incremental flood fills: once any boundaryCells cell is reached during BFS, the
+// whole group can be absorbed immediately and BFS only needs to continue from the
+// boundary cells rather than exploring every interior cell individually.
+struct InteriorGroup {
+    std::vector<Position> cells;          // all cells in this interior connected component
+    std::vector<Position> boundaryCells;  // subset: cells 4-adjacent to a dilation wall
+};
+
 class Fill {
 private:
     int indx;
@@ -69,6 +79,18 @@ private:
     std::unordered_set<Position, PositionHash> terrainBoundaryCells_; // in-bounds cells of the *opposite* terrain that border this fill (free walls, like map edges)
     std::unordered_map<size_t, std::set<std::pair<int, int>>> obstructionNeighbours_;
     int groupId_ = -1; // index of the merge-group this fill belongs to; fills sharing a groupId are treated as one region without being destructively merged
+    std::vector<Position> boundaryCells_; // fill cells 4-adjacent to a dilation wall, recorded during floodFill (the group's boundary)
+    int externalGapGroupCount_ = -1; // cached count of EXTERNAL gap groups (gaps not into a same-owner fill); -1 = unset -> gapReductionFactor falls back to all gapGroups_
+
+    /** @brief Gap interpolation weight in [0,1]: 1.0 = no external gaps, decays as external gaps
+     *         increase. Uses the cached external-gap count (setExternalGapGroupCount); feeds
+     *         walledBoostFactor(). */
+    double gapReductionFactor() const;
+
+    /** @brief Effective encloser multiplier used in getDominantPlayer: 1 + (isWalledMultiplier - 1)
+     *         * gapReductionFactor(), in [1, isWalledMultiplier]. Single source of truth for the
+     *         walled boost, shared by getDominantPlayer and closureCouldMatter. */
+    double walledBoostFactor() const;
 
 
 public:
@@ -90,6 +112,12 @@ public:
     const std::unordered_set<Position, PositionHash>& getTerrainBoundaryCells() const;
     void setGroupId(int groupId);
     int getGroupId() const;
+
+    /** @brief Sets the boundary cells (fill cells 4-adjacent to a dilation wall), recorded for
+     *         free during floodFill. The group's cells are cells_; its boundary is these. No
+     *         separate re-search/subdivision — one interior group per fill. */
+    void setBoundaryCells(std::vector<Position>&& boundary);
+    const std::vector<Position>& getBoundaryCells() const;
 
     /** @brief Appends all cell data from other (cells, gaps, dilation, bounds, etc.) and resolves closure owner. */
     void merge(const Fill& other);
@@ -129,6 +157,19 @@ public:
 
     /** @brief Returns the player that owns this fill based on threshold checks, or 0 if none qualifies. */
     size_t getDominantPlayer() const;
+
+    /** @brief Cheap soundness guard: true iff computing this fill's closure could change
+     *         getDominantPlayer()'s result (so checkClosureOwner is worth running). Returns false
+     *         only when the owner is provably identical with or without closure. */
+    bool closureCouldMatter() const;
+
+    /** @brief Player with the most raw cells in this fill (0 if none). Boost-independent basis for
+     *         classifying internal vs external gaps. */
+    size_t rawLeadingPlayer() const;
+
+    /** @brief Caches the count of EXTERNAL gap groups (computed with cross-fill context in
+     *         mergeFills) so gapReductionFactor() penalises only real openings, not internal seams. */
+    void setExternalGapGroupCount(size_t count);
     const std::vector<Position>& getCells() const;
     const std::vector<std::vector<Position>>& getGapGroups() const;
     const std::unordered_set<Position, PositionHash>& getDilationCells() const;
@@ -146,7 +187,23 @@ struct FillResult {
     std::vector<std::vector<Position>> gaps;
     std::vector<std::vector<size_t>> fillBoard;
     std::vector<std::vector<int>> fillAssignmentBoard; // cell → fill index (-1 = unclaimed/obstruction)
+    // One self-contained interior group per fill (cells + boundary). Self-contained (owns its cells)
+    // so it can persist in TerritoryAnalyser independently of the transient per-update fills.
+    std::vector<InteriorGroup> interiorGroups;
 };
+
+/**
+ * @brief Counts the EXTERNAL gap groups of a single fill for the gap-threshold closure gate. A gap
+ *        group is INTERNAL (a same-owner seam, not counted) iff myDominant is non-zero and every one
+ *        of its cells resolves via cellsToFill to a fill whose dominant player equals myDominant;
+ *        otherwise the gap group is external. Per-fill and keyed on the dominant PLAYER, so a
+ *        connected same-owner region may be partially owned. dominantByFill holds each fill's owner
+ *        (0 = none). Exposed for unit testing (see tests/test_gap_seam.cpp).
+ */
+size_t countExternalGapGroups(const Fill& fill,
+                              size_t myDominant,
+                              const std::vector<std::vector<int>>& cellsToFill,
+                              const std::vector<size_t>& dominantByFill);
 
 FillResult initialiseFill(
     const std::vector<std::vector<double>>& plLocalTerritories,
@@ -170,7 +227,7 @@ FillResult updateFill(
     const std::vector<std::vector<int>>& masterObstructionBoard,
     const std::vector<std::vector<std::vector<bool>>>& playerObstructionBoards,
     size_t numPlayers,
-    const std::vector<size_t>& dsuGroupBounds,     // {minX, maxX, minY, maxY} of the touching building cluster
+    const std::vector<size_t>& dsuGroupBounds,     // {minX, maxX, minY, maxY} of the touching obstruction cluster
     const std::vector<std::vector<size_t>>* WalkableTerrainBoard = nullptr,
     const std::vector<bool>* defeatedPlayers = nullptr,
     const std::string& stepLabel = ""              // debug: tag (e.g. "player"/"team") for updateFillSteps dumps

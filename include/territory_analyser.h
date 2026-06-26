@@ -13,7 +13,7 @@
 #include <array>
 #include <unordered_set>
 
-struct BuildingInfo {
+struct ObstructionInfo {
     size_t influenceRadius;
     size_t influenceWeight;
     size_t influenceSoftExpansion;
@@ -27,12 +27,12 @@ struct PlayerObject {
     std::size_t instanceId;
     std::size_t player;
     std::size_t team;
-    std::string building;
+    std::string obstruction;
     Position position;
     std::vector<std::vector<double>> influenceBoard;
     std::size_t influenceMinY;
     std::size_t influenceMinX;
-    BuildingInfo info;
+    ObstructionInfo info;
 };
 
 struct PlayerObjectHash {
@@ -41,7 +41,7 @@ struct PlayerObjectHash {
         const size_t h2 = std::hash<size_t>{}(p.position.second);
         const size_t h3 = std::hash<size_t>{}(p.player);
         const size_t h4 = std::hash<size_t>{}(p.team);
-        const size_t h5 = std::hash<std::string>{}(p.building);
+        const size_t h5 = std::hash<std::string>{}(p.obstruction);
         size_t seed = h1;
         seed ^= h2 + 0x9e3779b97f4a7c15ULL + (seed << 6) + (seed >> 2);
         seed ^= h3 + 0x9e3779b97f4a7c15ULL + (seed << 6) + (seed >> 2);
@@ -56,24 +56,24 @@ struct PlayerObjectEq {
         return lhs.position == rhs.position
             && lhs.player == rhs.player
             && lhs.team == rhs.team
-            && lhs.building == rhs.building;
+            && lhs.obstruction == rhs.obstruction;
     }
 };
 
-struct BuildingInstanceKey {
+struct ObstructionInstanceKey {
     std::size_t player;
     std::size_t team;
-    std::string building;
+    std::string obstruction;
     Position position;
 };
 
-struct BuildingInstanceKeyHash {
-    size_t operator()(const BuildingInstanceKey& key) const {
+struct ObstructionInstanceKeyHash {
+    size_t operator()(const ObstructionInstanceKey& key) const {
         const size_t h1 = std::hash<size_t>{}(key.position.first);
         const size_t h2 = std::hash<size_t>{}(key.position.second);
         const size_t h3 = std::hash<size_t>{}(key.player);
         const size_t h4 = std::hash<size_t>{}(key.team);
-        const size_t h5 = std::hash<std::string>{}(key.building);
+        const size_t h5 = std::hash<std::string>{}(key.obstruction);
         size_t seed = h1;
         seed ^= h2 + 0x9e3779b97f4a7c15ULL + (seed << 6) + (seed >> 2);
         seed ^= h3 + 0x9e3779b97f4a7c15ULL + (seed << 6) + (seed >> 2);
@@ -83,12 +83,12 @@ struct BuildingInstanceKeyHash {
     }
 };
 
-struct BuildingInstanceKeyEq {
-    bool operator()(const BuildingInstanceKey& lhs, const BuildingInstanceKey& rhs) const {
+struct ObstructionInstanceKeyEq {
+    bool operator()(const ObstructionInstanceKey& lhs, const ObstructionInstanceKey& rhs) const {
         return lhs.position == rhs.position
             && lhs.player == rhs.player
             && lhs.team == rhs.team
-            && lhs.building == rhs.building;
+            && lhs.obstruction == rhs.obstruction;
     }
 };
 
@@ -101,11 +101,11 @@ struct TerritoryPositionHash {
 };
 
 struct ConnectedObstructions {
-    std::unordered_set<PlayerObject, PlayerObjectHash, PlayerObjectEq> buildings;
+    std::unordered_set<PlayerObject, PlayerObjectHash, PlayerObjectEq> obstructions;
     std::vector<size_t> bounds = {0, 0, 0, 0}; // minX, maxX, minY, maxY
     bool closed = false;
     bool closedWithMapEdge = false;
-    std::unordered_set<size_t> mapEdgeBuildingIds; // instanceIds of buildings whose footprint reaches a map boundary
+    std::unordered_set<size_t> mapEdgeObstructionIds; // instanceIds of obstructions whose footprint reaches a map boundary
 };
 
 class TerritoryAnalyser {
@@ -120,20 +120,24 @@ class TerritoryAnalyser {
         cv::Mat finalPlayerTerritoryMap, finalTeamTerritoryMap, playerContestedMap, teamContestedMap;
         std::vector<std::vector<bool>> playerContestedMapTruth, teamContestedMapTruth;
         std::vector<Fill> playerFills, teamFills;
+        // Self-contained interior groups (cells + boundary, one per fill) — persistent scaffolding
+        // for the flood-skipping optimisation. Owned here (not on the fills) so they survive the
+        // per-update fill clear/re-flood.
+        std::vector<InteriorGroup> playerInteriorGroups, teamInteriorGroups;
         std::vector<std::vector<int>> playerFillAssignmentBoard, teamFillAssignmentBoard;
         std::vector<std::vector<Position>> playerGaps, teamGaps;
         std::vector<std::vector<std::vector<bool>>> playerObstructionBoards, teamObstructionBoards;
         std::vector<std::vector<std::vector<size_t>>> playerObstructionCounts, teamObstructionCounts;
         std::vector<std::vector<size_t>> WalkableTerrainBoard;
         size_t numPlayers, numTeams;
-        std::unordered_map<std::string, BuildingInfo> buildingsDict;
-        std::vector<std::string> combativeBuildings;
-        size_t nextBuildingInstanceId = 1;
-        std::unordered_map<size_t, PlayerObject> buildingInstancesById;
-        std::unordered_map<BuildingInstanceKey, std::vector<size_t>, BuildingInstanceKeyHash, BuildingInstanceKeyEq> buildingInstanceIdsByKey;
-        std::vector<std::string> rangedBuildings;
+        std::unordered_map<std::string, ObstructionInfo> obstructionsDict;
+        std::vector<std::string> combativeObstructions;
+        size_t nextObstructionInstanceId = 1;
+        std::unordered_map<size_t, PlayerObject> obstructionInstancesById;
+        std::unordered_map<ObstructionInstanceKey, std::vector<size_t>, ObstructionInstanceKeyHash, ObstructionInstanceKeyEq> obstructionInstanceIdsByKey;
+        std::vector<std::string> rangedObstructions;
         std::vector<bool> isPlayerDefeated;
-        std::unordered_map<Position, std::unordered_set<size_t>, TerritoryPositionHash> cellBuildingAttribution;
+        std::unordered_map<Position, std::unordered_set<size_t>, TerritoryPositionHash> cellObstructionAttribution;
         // Union-Find for ConnectedObstructions: O(α(N)) per union/find.
         std::unordered_map<size_t, size_t> dsuParent_; // instanceId -> parent instanceId
         std::unordered_map<size_t, size_t> dsuRank_;   // instanceId -> rank (union-by-rank)
@@ -143,28 +147,28 @@ class TerritoryAnalyser {
         void dsuUnion(size_t a, size_t b);
         void addToConnectedObstructions(size_t instanceId, size_t x, size_t y, size_t width, size_t height);
         void removeFromConnectedObstructions(size_t instanceId);
-        bool buildingTouchesMapEdge(const PlayerObject& b) const;
+        bool obstructionTouchesMapEdge(const PlayerObject& b) const;
         bool checkMapEdgeClosure(const ConnectedObstructions& group) const;
 
-        std::unordered_set<size_t> collectAttributedBuildingsInFootprint(size_t x, size_t y, size_t width, size_t height) const;
-        void updateCellAttributionForBuilding(const PlayerObject& buildingInstance, std::string mod);
-        std::tuple<std::size_t, std::size_t, std::size_t, std::size_t> reapplyAttributedBuildings(const std::unordered_set<size_t>& buildingIds, size_t skipId = 0);
+        std::unordered_set<size_t> collectAttributedObstructionsInFootprint(size_t x, size_t y, size_t width, size_t height) const;
+        void updateCellAttributionForObstruction(const PlayerObject& obstructionInstance, std::string mod);
+        std::tuple<std::size_t, std::size_t, std::size_t, std::size_t> reapplyAttributedObstructions(const std::unordered_set<size_t>& obstructionIds, size_t skipId = 0);
         static std::tuple<size_t, size_t, size_t, size_t> mergeBounds(const std::tuple<size_t, size_t, size_t, size_t>& lhs, const std::tuple<size_t, size_t, size_t, size_t>& rhs);
-        bool hasNearbyBuildings(size_t x, size_t y, size_t width, size_t height) const;
+        bool hasNearbyObstructions(size_t x, size_t y, size_t width, size_t height) const;
 
-        // updateBuilding() helpers
-        bool lookupBuildingAndTeam(const std::string& building, int player, BuildingInfo& infoOut, int& teamOut);
-        PlayerObject makeBuildingInstance(size_t x, size_t y, const std::string& building, int player, int team, const BuildingInfo& info) const;
-        std::pair<std::unordered_set<size_t>, std::unordered_set<size_t>> collectImpactedOwners(int player, int team, const std::unordered_set<size_t>& impactedBuildings) const;
-        std::tuple<size_t, size_t, size_t, size_t> performTerritoryUpdateWithDSUSync(PlayerObject buildingInstance, const std::string& mod);
+        // updateObstruction() helpers
+        bool lookupObstructionAndTeam(const std::string& obstruction, int player, ObstructionInfo& infoOut, int& teamOut);
+        PlayerObject makeObstructionInstance(size_t x, size_t y, const std::string& obstruction, int player, int team, const ObstructionInfo& info) const;
+        std::pair<std::unordered_set<size_t>, std::unordered_set<size_t>> collectImpactedOwners(int player, int team, const std::unordered_set<size_t>& impactedObstructions) const;
+        std::tuple<size_t, size_t, size_t, size_t> performTerritoryUpdateWithDSUSync(PlayerObject obstructionInstance, const std::string& mod);
         void refreshOwnerBoolPasses(const std::unordered_set<size_t>& impactedPlayers, const std::unordered_set<size_t>& impactedTeams, const std::tuple<size_t, size_t, size_t, size_t>& bounds);
         void rebuildMasterBoards();
-        void updatePlayerAndTeamFills(size_t x, size_t y, const BuildingInfo& info, bool isFastPath, const std::string& mod, const std::vector<size_t>& dsuGroupBounds);
+        void updatePlayerAndTeamFills(size_t x, size_t y, const ObstructionInfo& info, bool isFastPath, const std::string& mod, const std::vector<size_t>& dsuGroupBounds);
 
     public:
-        struct BuildingStateResult {
+        struct ObstructionStateResult {
             bool shouldProceed = false;
-            BuildingInfo info;
+            ObstructionInfo info;
             bool isFastPath = false;
             std::vector<size_t> dsuGroupBounds;
         };
@@ -176,24 +180,30 @@ class TerritoryAnalyser {
          *         outside the radius are non-walkable).  Replace with real terrain data in production. */
         void initWalkableTerrain();
 
-        /** @brief Performs all territory/obstruction/DSU state updates for a building add/remove,
+        /** @brief Performs all territory/obstruction/DSU state updates for a obstruction add/remove,
          *         but does NOT update fills.  Returns a result struct whose shouldProceed flag is
-         *         false when the call was a no-op (e.g. unknown building or defeated-player early
-         *         return).  Use this instead of updateBuilding when fill recomputation is unwanted
+         *         false when the call was a no-op (e.g. unknown obstruction or defeated-player early
+         *         return).  Use this instead of updateObstruction when fill recomputation is unwanted
          *         (e.g. during initial state loading before initialiseFill has been called). */
-        BuildingStateResult updateBuildingState(size_t x, size_t y, const std::string& building, int player, const std::string& mod);
+        ObstructionStateResult updateObstructionState(size_t x, size_t y, const std::string& obstruction, int player, const std::string& mod);
 
-        /** @brief Main entry point for adding or removing a building: orchestrates territory,
+        /** @brief Performs all territory/obstruction/DSU state updates for a batch of obstructions,
+         *         but only adding. Used in initial state loading before initialiseFill has been called. 
+         *         Takes a pathFile string as input, which should contain all the obstruction data in 
+         *         the format x, y, obstruction, player. */
+        ObstructionStateResult batchAddObstructions(std::string filePath);
+
+        /** @brief Main entry point for adding or removing an obstruction: orchestrates territory,
          *         obstruction, DSU connectivity, and fill recomputation for all affected players/teams. */
-        void updateBuilding(size_t x, size_t y, std::string building, int player, std::string mod);
+        void updateObstruction(size_t x, size_t y, std::string obstruction, int player, std::string mod);
 
         /** @brief Updates per-player and per-team obstruction boards for the given footprint and
          *         rebuilds the master bitmask boards for each affected cell. */
-        void updateObstruction(size_t x, size_t y, size_t bw, size_t bh, int player, int team, std::string mod);
+        void updateObstructionBoards(size_t x, size_t y, size_t bw, size_t bh, int player, int team, std::string mod);
 
-        /** @brief Adds or removes a building's territory influence in playerGrids/teamGrids.
+        /** @brief Adds or removes an obstruction's territory influence in playerGrids/teamGrids.
          *  @return The (minX, maxX, minY, maxY) bounds of the affected region. */
-        std::tuple <std::size_t,std::size_t,std::size_t,std::size_t> updateTerritory(PlayerObject buildingInstance, size_t player, std::string mod);
+        std::tuple <std::size_t,std::size_t,std::size_t,std::size_t> updateTerritory(PlayerObject obstructionInstance, size_t player, std::string mod);
 
         /** @brief Recomputes edge boards from master boards and fill boards for the given render type
          *         ("player" or "team"), then runs colourPass(). */
@@ -231,12 +241,12 @@ class TerritoryAnalyser {
          *         mult_factor as the bitmask weight; obstruction cells bypass the bool grid. */
         std::vector<std::vector<double>> addPlTerrToMaster(std::vector<std::vector<double>> masterBoard, std::vector<std::vector<bool>> playerBoard, const std::vector<std::vector<int>>& obstructionBoard, int mult_factor);
 
-        /** @brief Loads building definitions from a JSON file (tries "../" prefix as fallback).
-         *         Populates buildingsDict, rangedBuildings, and militaryBuildings. */
-        void loadBuildingsDict(const std::string& dictPath);
+        /** @brief Loads obstruction definitions from a JSON file (tries "../" prefix as fallback).
+         *         Populates obstructionsDict, rangedObstructions, and militaryObstructions. */
+        void loadObstructionsDict(const std::string& dictPath);
 
         /** @brief Marks player as defeated, zeroes their territory grid, and adjusts the team grid
-         *         by removing non-ranged and re-applying ranged building contributions. */
+         *         by removing non-ranged and re-applying ranged obstruction contributions. */
         void playerDefeated(size_t player);
 
 };

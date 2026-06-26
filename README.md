@@ -1,155 +1,153 @@
 # Territory Analyser
 
-Welcome to territory analyser. This is a work-in-progress. If you would like to integrate this into your own software, please message me.
+A real-time territory analysis library for RTS games and board games, designed with Age of Empires 2 in mind but intentionally game-agnostic.
 
-This project was designed with Age of Empires 2 in mind, however it has been intentionally designed to be easily adaptable to any RTS and some board games. 
+## Setup
 
-## Setup 
+1. Install OpenCV 4.x. Follow the instructions at https://docs.opencv.org/4.x/df/d65/tutorial_table_of_content_introduction.html
 
-1. The project uses OpenCV to turn the output arrays into color mats. You can install OpenCV by following the instructions here: https://docs.opencv.org/4.x/df/d65/tutorial_table_of_content_introduction.html
+2. Build `obstructionsDict.json`. See **How It Works → Obstructions Dictionary** below.
 
-2. Build buildings_dict. See "How it Works" for a detailed explanation.
+3. Provide a walkable-terrain board (`examples/AAAImageWater.txt`). This is a grid of `0`/`1` characters marking non-walkable (water) and walkable cells. Without it the analyser defaults to all-walkable.
 
-3. Build the nonWalkableTerrainBoard (fix the temporary function findNonWalkableTerrainEdges()). This is a board that marks all the terrain that can't be walked on (i.e. water). This is different to objects that can be destroyed (i.e. buildings, trees, limited gold mines).
+4. Edit `settings.json` to match your configuration.
 
-4. Edit the settings.json file to match your configuration. If integrating into a game or spectating application, you can skip this step and define your config using the AppConfig namespace.
-
-5. Have fun!
+5. Build with CMake (see **Build** below) and run.
 
 
+## Build
 
-## Common Errors
+The project uses CMake and requires GCC/G++ 17+.
 
-#### -Ensure that GCC and G++ are 17+ compatible-
-If on Linux, run `sudo apt update && sudo apt upgrade gcc g++`, and check the version with `gcc -v`.
-
-If the version is still incorrect, it may be due to symlink issues from multiple gcc versions on the system.
-
-#### -If using VS Code-
-- You will need to update C/C++ properties JSON file. Open Command Palette and search for C/C++: Edit Configurations (JSON). Add ` "/usr/local/include/opencv4",`
-- You may need to go into Preferences > Settings, Search "cppstandard" and set to c++17.
-- In .vscode/tasks.json add the following lines to the cppbuild args section:
-
-```
-    "-std=c++17",
-    "${workspaceFolder}/*.cpp",
-    // -o
-    "-I/usr/local/include/opencv4", // Include path
-    "-L/usr/local/lib", // Library path
-    "-lopencv_imgcodecs", // Example library flags
-    "-lopencv_core",
-    "-lpthread",
-    "-lopencv_highgui",
-    "-lopencv_imgproc"
+```bash
+mkdir build && cd build
+cmake ..
+cmake --build . --parallel
+./Territory-Analyser
 ```
 
-- It may also be helpful to add this section above the curly braces of the cpp build:
+### Common Setup Issues
 
-```
-    {
-        "label": "build",
-        "type": "shell",
-        "command": "${command:cmake.buildCurrentTarget}",
-        "group": {
-            "kind": "build",
-            "isDefault": true
-        },
-        "options": {
-            "cwd": "${workspaceFolder}/build"
-        },
-        "problemMatcher": [
-            "$gcc"
-        ]
-    },
-```
+**GCC version too old** — on Linux: `sudo apt update && sudo apt upgrade gcc g++`, then `gcc -v`. If still wrong, check for symlink issues across multiple installed versions.
 
-- Use CMakeBuild and run (bottom left corner of VS Code, not the top right corner).
+**VS Code users**
+- In `C/C++: Edit Configurations (JSON)` add `"/usr/local/include/opencv4"` to `includePath`.
+- Set `cppstandard` to `c++17` in Preferences → Settings.
+- Add to `.vscode/tasks.json` (cppbuild args):
+```json
+"-std=c++17",
+"${workspaceFolder}/*.cpp",
+"-I/usr/local/include/opencv4",
+"-L/usr/local/lib",
+"-lopencv_imgcodecs",
+"-lopencv_core",
+"-lpthread",
+"-lopencv_highgui",
+"-lopencv_imgproc"
+```
+- Use CMakeBuild (bottom-left of VS Code, not the top-right run button).
 
 
 ## Usage
 
-### Workflow
+### Typical Workflow
 
-There is a simple 4 step process:
+```cpp
+// 1. Initialise
+TerritoryAnalyser analyser(mapSize, numPlayers, numTeams, teamAssignments, threshold, "state.txt");
 
-1. Initialise your system (map size, players, teams, neutral objects).
-2. Add player-controlled objects (i.e. buildings) to the grids using analyser.updateBuilding(x,y,building,player,type) // type = "add" or "remove"
-3. When you want a visual update use updateRender() which will perform fill analysis etc. and update the output mat.
-4. Use getFinalTerritoryMap("player" or "team") to get the output mat. Display the output mat using imshow(), imwrite() or integrate into your game/spectating application.
+// 2. Add/remove obstructions as the game state changes
+analyser.updateObstruction(x, y, "Castle", player, "add");
+analyser.updateObstruction(x, y, "Castle", player, "remove");
 
-- Perform steps 2 - 4 again as needed.
-- If using "flash" contested territory method, perform updateContestedFlash() every frame.
+// 3. Trigger a render update
+analyser.updateRender("player");  // or "team"
+
+// 4. Get the output mat
+cv::Mat result = analyser.getFinalTerritoryMap("player");
+```
+
+Repeat steps 2–4 as game state evolves. For the `"flash"` contested-territory method, call `updateContestedFlash()` every frame.
+
+**Initial state file format** — one command per line:
+```
+analyser.updateObstruction(x, y, "House", 1, "add");
+```
+Lines starting with `#` are treated as comments.
 
 
 ## How It Works
 
-### Raw Territory 
+### Raw Territory
 
-Buildings add influence around them, as per attributed defined in buildings_dict. 
-The influence is stored on a board with cumulative weightings. 
-For example, a castle may give 7 score to every tile within 8 radius of it, with a soft edge of 5. A house may give 3 to a radius of 0 with a soft edge of 1. 
+Each obstruction contributes influence to the cells around it, using attributes from `obstructionsDict.json` (radius, weight, soft-edge, width, height). Influence is additive: placing two obstructions near each other grows their combined territory.
 
-Then we define a threshold that a cell needs to surpass to be owned by a player i.e. a threshold of 3. 
-We store the mappings of what each player owns. So there are two mappings, a mapping for weights and a mapping for defined ownership from raw territory. 
+The master board uses power-of-two bitmask encoding per player so multi-owner (contested) cells are detectable in a single integer comparison.
 
-The MasterBoard of player ownership uses additive binary layering 
-i.e. if player 1 owns a cell, it has a score of 1, player 2 has a score of 2, player 3 has a score of 4. 
-If player 1 and 2 contest a cell, then it has a score of 3.
-
-**Soft Edges:**  
-If a house is 9 tiles away from a castle, their radii won't overlap but their soft edges will. 
-In this way, the fact that the buildings are close to each other provides extra territory (intuitive) and looks more visually appealing.
-
+**Soft edges** — if two obstructions are just outside each other's hard radii, their soft-edge influence still overlaps, giving a small territory bonus for proximity.
 
 ### Contested Territory
 
-There are several controls for how to deal with contested regions. They are  
-- "growth": assign contested cell ownership to players based on distance to nearest obstructions  
-- "flash": make the contested area flash (changes the alpha output)  
-- "staticColour": set it to one colour (i.e. grey)  
-
-The method can be set in the config file.
-
-### Edges of territory
-
-Edges are found by a box check on every cell. The box check looks at (i,j), (i+1,j), (i,j+1) and (i+1,j+1). If any of these 4 cells have different ownership, then (i,j) is an edge. 
+Three methods, set in `settings.json → contestedTerritoryMethod`:
+- `"growth"` — each contested cell is awarded to the owner with the best distance-weighted score.
+- `"flash"` — contested cells pulse in alpha (call `updateContestedFlash()` every frame).
+- `"staticColour"` — contested cells are set to a fixed colour.
 
 ### Fill
 
-Fill uses obstructions to make territory closures. It takes a fill-first approach. The steps are:
-1. Merges all obstruction boards (including Gaia at key 0) into one wall map.  
-2. Dilates those walls (and the edge of the map) by one cell so that nearly closed shapes can be treated as closed. 
-3. Runs flood fill over all remaining open cells to find candidate regions.
-4. Detects gaps around each fill using dilated walls.
-5. Explores the obstructions around the fill to determine if it is closed by one player.
-6. Each final region is assigned to a dominant player based on local territory presence in that region, with an extra boost when one player is the sole owner of bordering obstruction cells (i.e. when a player has completely walled off a section of the map). 
-7. The output of the fill process is a fill board and the gap information.
+Fill uses obstructions to detect closed shapes and assign interior territory. Pipeline:
 
-### Color pass
+1. **Wall map** — merge all per-player obstruction boards (including Gaia at key 0) into one boolean wall grid.
+2. **Dilation** — dilate walls and map edges by one cell so nearly-closed shapes are treated as closed.
+3. **Flood fill** — flood over all open (non-wall, non-dilated) cells to find candidate fill regions.
+4. **Gap detection** — for each fill, find gap cells (undilated openings in the surrounding wall ring) and group them into connected gap sets.
+5. **Closure analysis** (`ClosureResult`) — for each fill, determine the set of players whose obstructions geometrically enclose it. A fill is "enclosed" by player P if P's obstructions (via the DSU connected-obstruction graph) form a closed ring around the fill region.
+6. **Dominant player** — among the enclosing players, the dominant is the one with the highest adjusted count: every encloser's raw territory-cell count inside the fill is boosted by `isWalledMultiplier`. The winner must also exceed `ownershipThreshold` of the un-boosted total.
+7. **Gap threshold** — fills with more than `CLOSED_SHAPE_GAPS_THRESHOLD` *external* gap cells (gaps connecting to a different fill's territory or unclaimed space) have their closure cleared. They keep their cells and group membership but contribute no walled boost to dominant-player calculation. **Fills are never erased** — this keeps the fill-assignment board consistent across incremental updates.
+8. **Output** — a fill board (per-cell dominant-player encoding), per-player gap-cell sets, and fill metadata.
 
-The color pass takes all the information in the system (neutral objects, edges of territory, territory and fill-in closed-shape territory) and layers them into a final output. The priority is:
+### Incremental Updates (`updateObstruction`)
 
-1. Neutral objects on top (so no territory analysis affects the colour or visibility of neutral objects)
-2. Edges 
-3. Raw Territory (from the influence of buildings)
-4. Fill is last (filling closed or nearly closed shapes from obstructions)
+After each obstruction add/remove the analyser takes one of three paths:
 
-This method deals simply with an enemy's object being shown when inside of a filled shape.
+- **Fast path (no topology change)** — the obstruction footprint has no neighbours within Chebyshev distance 2. Only footprint cells are evicted from or registered into the fill board; no reflood.
+- **Fast path (dominant flip)** — same isolation criterion but the obstruction's influence shifts the dominant player of one or more fills. A global tail runs: `mergeFills → removeShapesByGapThreshold → encodeFillsAndGapsForOutput` over existing fills, no reflood. This is idempotent because fills are never erased.
+- **Slow path (topology change)** — a neighbour exists within Chebyshev-2. Falls back to a full `initialiseFill` recompute (faithful baseline).
 
-### Buildings_dict
+### DSU (Connected Obstructions)
 
-Buildings are an essential part of any game. They represent obstructions on the map that can't be traversed. They are also the pieces that define territory. Hence, we need a dictionary of all the buildings and what their properties are. The included buildings dict contains examples, however implementing your own comprehensive buildings_dict could be time consuming. Here are some suggestions to speed up the process:
-- Find attributes that can help you set some standard logic. I.e. if it is a ranged building like a castle, krepost, tower, fortified church, dock, relate the territory influence to the range of the object.
-- Set a standard for buildings that have no ranged attack but can build military units (i.e. barracks, archery range, stable).
-- Set another standard for buildings that have no range and can't build military units (i.e. walls, houses, market, university).
-- Consider exceptions that you might want to handle separately such as siege workshops, monasteries and outposts.
+A union-find structure tracks which obstructions are directly adjacent (footprint gap ≤ 0). Each connected component stores: member set, bounding box, `closed` flag (cycle detected), and `closedWithMapEdge` flag (two separate map-boundary contact points). These flags drive the closure analysis in step 5 above.
 
-Attributes in buildings_dict:
-- Radius (size of territory influence the building has on it's surroundings)
-- Weighting (strength of influence)
-- Soft edge (how quickly influence decreases after radius distance)
-- Soft edge starting value division factor (soft_edge linearly decreases from THRESHOLD/SoftEdgeDivFactor to 0)
-- Width (width of building)
-- Height (height of building)
+### Colour Pass
 
-In buildings_dict you will also need to build the list of ranged_buildings.
+Layers rendered in priority order (lowest overrides highest):
+1. Fill territory (interior of closed/nearly-closed shapes)
+2. Raw territory (influence from obstructions)
+3. Territory edges
+4. Neutral / Gaia objects (always on top)
+
+### Incremental Update Oracle
+
+Set `validateIncrementalFills: true` in `settings.json` to enable a correctness oracle. After each incremental `updateObstruction`, the oracle runs a fresh `initialiseFill` and diffs the result against the incremental result on four invariants: fill-board ownership, per-player gap-cell sets, fill partition (which cells belong to which fill), and per-fill properties (dominant player, closure, gap cells). A `[VALIDATE label] OK — 0/0/0/0` line confirms the incremental path is faithful. This flag carries a significant performance cost; leave it off in production.
+
+
+## Obstructions Dictionary (`obstructionsDict.json`)
+
+All obstruction types must be defined here. Attributes:
+
+| Field | Meaning |
+|---|---|
+| `radius` | Influence radius (cells) |
+| `weight` | Influence strength inside radius |
+| `softEdge` | Number of extra cells beyond radius where influence tapers to zero |
+| `softEdgeDivFactor` | Taper start value = `ownershipThreshold / softEdgeDivFactor` |
+| `width` | Footprint width (cells) |
+| `height` | Footprint height (cells) |
+
+The file also contains a `rangedObstructions` list. Ranged obstructions use Euclidean (radial) distance for influence; non-ranged obstructions use an 8-neighbour Dijkstra from the footprint, respecting walls and non-walkable terrain.
+
+**Tips for building your own dictionary**
+- Ranged obstructions (towers, castles, etc.): relate radius to the object's attack range.
+- Military-production obstructions (barracks, stables): use a moderate fixed radius.
+- Economic/civilian obstructions (houses, walls): small radius, low weight.
+- Exceptions (docks, harbours): mark as `nonWalkableTerrainObstructions` in `settings.json` so their Dijkstra influence propagates over water.

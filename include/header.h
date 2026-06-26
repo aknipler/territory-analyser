@@ -22,7 +22,7 @@ struct Config {
 
     // Testing Settings
     bool testingMode;
-    bool forceRadialInfluenceForAllBuildings;
+    bool forceRadialInfluenceForAllObstructions;
     bool validateIncrementalFills; // debug: diff each incremental updateFill against a full initialiseFill
     bool dumpInitialiseFillSteps;  // debug: write per-step images of the first initialiseFill to output/initialiseFillSteps/
     bool dumpUpdateFillSteps;      // debug: write per-step images of every updateFill call to output/updateFillSteps/
@@ -42,7 +42,7 @@ struct Config {
     double ownershipThreshold;
     double contestedOwnershipThreshold;
     double isWalledMultiplier;
-    std::vector<std::string> nonWalkableTerrainBuildings;
+    std::vector<std::string> nonWalkableTerrainObstructions;
 
     std::vector<std::vector<bool>> nonWalkableTerrainExample;
 
@@ -55,4 +55,4 @@ struct Config {
 
 bool outputForTests(const TerritoryAnalyser& analyser, const Config& config, const std::string& fileName = "2x3_Test");
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Config, appName, version, testingMode, forceRadialInfluenceForAllBuildings, validateIncrementalFills, dumpInitialiseFillSteps, dumpUpdateFillSteps, outputDirectory, numberOfPlayers, numberOfTeams, mapSize, teamAssignments, playerColours, teamColours, contestedTerritoryMethod, contestedTerritoryMethodOptions, contestedTerritoryColour, rawTerritoryOwnershipThreshold, CLOSED_SHAPE_GAPS_THRESHOLD, ownershipThreshold, contestedOwnershipThreshold, isWalledMultiplier, nonWalkableTerrainBuildings, edgeOpacity, territoryOpacity)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Config, appName, version, testingMode, forceRadialInfluenceForAllObstructions, validateIncrementalFills, dumpInitialiseFillSteps, dumpUpdateFillSteps, outputDirectory, numberOfPlayers, numberOfTeams, mapSize, teamAssignments, playerColours, teamColours, contestedTerritoryMethod, contestedTerritoryMethodOptions, contestedTerritoryColour, rawTerritoryOwnershipThreshold, CLOSED_SHAPE_GAPS_THRESHOLD, ownershipThreshold, contestedOwnershipThreshold, isWalledMultiplier, nonWalkableTerrainObstructions, edgeOpacity, territoryOpacity)

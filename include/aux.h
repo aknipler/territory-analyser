@@ -13,7 +13,7 @@
 #include <vector>
 
 struct Config;
-struct BuildingInfo;
+struct ObstructionInfo;
 class TerritoryAnalyser;
 
 namespace AppConfig {
@@ -30,9 +30,9 @@ inline int sgn(T val) {
 
 Config loadConfig(const std::string& configPath);
 
-/** @brief Parses a building command file and calls analyser.updateBuilding for each valid line.
+/** @brief Parses a obstruction command file and calls analyser.updateObstruction for each valid line.
  *  @return false if the file cannot be opened or contains a malformed command. */
-bool loadBuildingCommandsFromFile(TerritoryAnalyser& analyser, const std::string& commandsPath);
+bool loadObstructionCommandsFromFile(TerritoryAnalyser& analyser, const std::string& commandsPath);
 
 /** @brief Runs fn(), logs elapsed wall-clock time labelled with label to stdout, and returns fn()'s result. */
 template <typename T>
@@ -47,3 +47,5 @@ T measureAndLogExecutionTime(const std::string& label, const std::function<T()>&
 };
 
 std::vector<std::vector<bool>> rotateBoolBoard90CounterClockwise(const std::vector<std::vector<bool>>& input);
+
+cv::Mat applyTAmatToCAoutput(const cv::Mat& caOutput, const cv::Mat& taMat);

@@ -10,12 +10,16 @@ int main() {
     const Config& config = AppConfig::get();
 
     // Initialise analyser
-    // std::string initBoardStatePath = "examples/AAAImageExample.txt";
-    std::string initBoardStatePath = "examples/example1.txt";
+    std::string initBoardStatePath = "examples/AAAImageExample.txt";
+    // std::string initBoardStatePath = "examples/example1.txt";
+    std::chrono::high_resolution_clock::time_point initStartTime = std::chrono::high_resolution_clock::now();
     TerritoryAnalyser analyser(config.mapSize, config.numberOfPlayers, config.numberOfTeams, config.teamAssignments, config.rawTerritoryOwnershipThreshold, initBoardStatePath);
+    std::chrono::high_resolution_clock::time_point initEndTime = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> initDuration = initEndTime - initStartTime;
+    std::cout << "Initialisation time: " << initDuration.count() << " ms" << std::endl;
 
     // Load example
-    // if (!loadBuildingCommandsFromFile(analyser, "examples/example1.txt")) {
+    // if (!loadObstructionCommandsFromFile(analyser, "examples/example1.txt")) {
     //     return 1;
     // }
 
@@ -23,15 +27,15 @@ int main() {
     analyser.updateRender("team");
 
     if (!outputForTests(analyser, config, "FinalTestingOutput")) {std::cerr << "Error: Could not write final testing image." << std::endl;return 1;}
-    exit(0);
+
     // Measure tests
     if (initBoardStatePath == "examples/example1.txt") {
-        measureAndLogExecutionTime<int>("add one (final => slowest) building", 
-            std::function<int()>([&analyser]() { analyser.updateBuilding(27,14,"Blacksmith",3, "add"); return 0; } )
+        measureAndLogExecutionTime<int>("add one (final => slowest) obstruction", 
+            std::function<int()>([&analyser]() { analyser.updateObstruction(27,14,"Blacksmith",3, "add"); return 0; } )
         );
         
-        measureAndLogExecutionTime<int>("remove one (final => slowest) building",
-            std::function<int()>([&analyser]() { analyser.updateBuilding(27,14,"Blacksmith",3, "remove"); return 0; } )
+        measureAndLogExecutionTime<int>("remove one (final => slowest) obstruction",
+            std::function<int()>([&analyser]() { analyser.updateObstruction(27,14,"Blacksmith",3, "remove"); return 0; } )
         );
 
         // Fast-path flip test: an isolated p1 Castle dropped deep inside p4's walled enclosure.
@@ -39,7 +43,7 @@ int main() {
         // interior fill, flipping its dominant -> exercises the anyFlip -> global-tail rebuild.
         // Expect a "[FAST-PATH FLIP] mod=add ..." line, a render snapshot, then "mod=remove".
         measureAndLogExecutionTime<int>("add isolated Castle (fast-path flip test)",
-            std::function<int()>([&analyser]() { analyser.updateBuilding(24,35,"Castle",1, "add"); return 0; } )
+            std::function<int()>([&analyser]() { analyser.updateObstruction(24,35,"Castle",1, "add"); return 0; } )
         );
         analyser.updateRender("player");
         analyser.updateRender("team");
@@ -48,7 +52,7 @@ int main() {
             return 1;
         }
         measureAndLogExecutionTime<int>("remove isolated Castle (fast-path flip test)",
-            std::function<int()>([&analyser]() { analyser.updateBuilding(24,35,"Castle",1, "remove"); return 0; } )
+            std::function<int()>([&analyser]() { analyser.updateObstruction(24,35,"Castle",1, "remove"); return 0; } )
         );
 
         analyser.updateRender("player");
@@ -62,9 +66,9 @@ int main() {
         }
 
         std::cout << std::endl;
-        measureAndLogExecutionTime<int>("remove connected building",
-            // std::function<int()>([&analyser]() { analyser.updateBuilding(7,29,"House",2, "remove"); return 0; } )
-            std::function<int()>([&analyser]() { analyser.updateBuilding(17,42,"House",4, "remove"); return 0; } )
+        measureAndLogExecutionTime<int>("remove connected obstruction",
+            // std::function<int()>([&analyser]() { analyser.updateObstruction(7,29,"House",2, "remove"); return 0; } )
+            std::function<int()>([&analyser]() { analyser.updateObstruction(17,42,"House",4, "remove"); return 0; } )
         );
         std::cout << std::endl;
         // Test player defeated
@@ -83,8 +87,8 @@ int main() {
                 return 1;
            }
 
-            measureAndLogExecutionTime<int>("remove building from defeated player", 
-                std::function<int()>([&analyser]() { analyser.updateBuilding(6,1,"House",1, "remove"); return 0; } )
+            measureAndLogExecutionTime<int>("remove obstruction from defeated player", 
+                std::function<int()>([&analyser]() { analyser.updateObstruction(6,1,"House",1, "remove"); return 0; } )
             );
         }
     }
@@ -123,6 +127,11 @@ int main() {
     if (!cv::imwrite(config.outputDirectory + "Territory Analyser Results Team.png", analyser.getFinalTerritoryMap("team"))) {std::cerr << "Error: Could not write final team output image." << std::endl; return 1;}
     
     std::cout << "Current path: " << std::filesystem::current_path() << std::endl;
+
+    cv::Mat testCaptureAgeOverlay = applyTAmatToCAoutput(cv::imread("../examples/AAAMapImage-MINIMAP.png"), analyser.getFinalTerritoryMap("team"));
+    if (!cv::imwrite(config.outputDirectory + "CAOverlaidImage.png", testCaptureAgeOverlay)) {std::cerr << "Error: Could not write CA overlay image." << std::endl; return 1;}
+
+
     return 0;
 
 }
