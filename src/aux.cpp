@@ -423,9 +423,7 @@ cv::Mat applyTAmatToCAoutput(const cv::Mat& caOutput, const cv::Mat& taMat)
     // Get the blend from the TA output i.e. setup alphaBlend
     cv::extractChannel(taMatResized, alphaChannel, 3);
     alphaChannel.convertTo(alphaChannelFloat, CV_32F, 1.0 / 255.0);
-    cv::imwrite("output/alphaChannel.png", alphaChannel);
     cv::multiply(maskFloat, alphaChannelFloat, alphaBlend);
-    cv::imwrite("output/alphaBlend.png", alphaBlend);
 
     cv::Mat alphaBlend3ch;
     cv::Mat in[] = { alphaBlend, alphaBlend, alphaBlend };
@@ -441,16 +439,13 @@ cv::Mat applyTAmatToCAoutput(const cv::Mat& caOutput, const cv::Mat& taMat)
     // Combine CA and TA, make float
     cv::Mat fgFloat, bgFloat, dbg, dbg2;
     foregroundBGR.convertTo(fgFloat, CV_32FC3);
-    cv::imwrite("output/fgBGR.png", foregroundBGR);
     caOutput.convertTo(bgFloat, CV_32FC3);
 
     // dbg
     dbg = (fgFloat.mul(alphaBlend3ch));
     dbg.convertTo(dbg,CV_8UC3);
-    cv::imwrite("output/fgFloatBlended.png", dbg);
     dbg2 = (bgFloat.mul(cv::Scalar::all(1.0) - alphaBlend3ch));
     dbg2.convertTo(dbg2, CV_8UC3);
-    cv::imwrite("output/bgFloatBlended.png", dbg2);
 
     cv::Mat result = fgFloat.mul(alphaBlend3ch) + bgFloat.mul(cv::Scalar::all(1.0) - alphaBlend3ch);
     result.convertTo(result, CV_8UC3);

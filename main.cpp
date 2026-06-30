@@ -10,7 +10,7 @@ int main() {
     const Config& config = AppConfig::get();
 
     // Initialise analyser
-    std::string initBoardStatePath = "examples/AAAImageExample.txt";
+    std::string initBoardStatePath = "examples/AAAImageExampleNew.txt";
     // std::string initBoardStatePath = "examples/example1.txt";
     std::chrono::high_resolution_clock::time_point initStartTime = std::chrono::high_resolution_clock::now();
     TerritoryAnalyser analyser(config.mapSize, config.numberOfPlayers, config.numberOfTeams, config.teamAssignments, config.rawTerritoryOwnershipThreshold, initBoardStatePath);

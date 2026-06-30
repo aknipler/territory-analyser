@@ -72,10 +72,11 @@ TerritoryAnalyser::TerritoryAnalyser(size_t givenSize, size_t numPlayers, size_t
         std::function<int()>([this]() { this->loadObstructionsDict("obstructionsDict.json"); return 0; } )
     );
 
-    // Setup the initial state of the map (can change this to integrate with your system)
-    // This should be replaced by batchAddObstructions() when it is ready. Current implementation is incredibly slow.
-    measureAndLogExecutionTime<int>("load obstruction commands from file", 
-        std::function<int()>([this, initialStatePath]() { loadObstructionCommandsFromFile(*this, initialStatePath); return 0; } )
+    // Setup the initial state of the map (can change this to integrate with your system).
+    // batchAddObstructions is the efficient bulk loader (places all walls, then computes territory
+    // once); loadObstructionCommandsFromFile remains available as the per-line alternative.
+    measureAndLogExecutionTime<int>("load initial obstructions",
+        std::function<int()>([this, initialStatePath]() { batchAddObstructions(initialStatePath); return 0; } )
     );
 
     // if (!loadObstructionCommandsFromFile(*this, initialStatePath)) {
@@ -261,74 +262,114 @@ TerritoryAnalyser::ObstructionStateResult TerritoryAnalyser::updateObstructionSt
 }
 
 
+// ---------- batchAddObstructions ----------
+
 /**
- * @brief Performs all territory/obstruction/DSU state updates for a obstruction add/remove,
- *        but does NOT update fills.  Use this during initial state loading (before initialiseFill
- *        has been called).  Returns a result whose shouldProceed is false on early-return paths.
+ * @brief Efficient add-only bulk loader for initial state (before initialiseFill). Places every
+ *        obstruction's footprint on the obstruction boards first, then computes each obstruction's
+ *        territory once against the COMPLETE wall map, then does a single bool-pass + master rebuild.
+ *        This avoids the per-obstruction reapply (O(N^2) territory recomputation) and per-obstruction
+ *        full-board passes that make the incremental per-line loader slow on a dense initial state.
+ *        Produces the same final boards as adding every obstruction individually.
  */
-TerritoryAnalyser::ObstructionStateResult TerritoryAnalyser::batchAddObstructions(
-    std::string filePath) {
+bool TerritoryAnalyser::batchAddObstructions(const std::string& filePath) {
+
+    // ----- Step 0: read and parse the whole file up front. -----
+    std::ifstream file(filePath);
+    std::string usedPath = filePath;
+    if (!file.is_open()) {
+        usedPath = "../" + filePath;
+        file.open(usedPath);
+    }
+    else {
+        usedPath = filePath;
+    }
+    if (!file.is_open()) {
+        std::cerr << "Error: batchAddObstructions could not open obstruction file. Tried: "
+                  << filePath << ", " << ("../" + filePath) << std::endl;
+        return false;
+    }
+
+    // Accepts both the new data format  x,y,"Name",player  and the legacy
+    // analyser.updateObstruction(x,y,"Name",player, "add");  — parsing keys off the first digit and
+    // stoi() ignores any trailing legacy arguments after the player id.
+    std::vector<ParsedObstruction> parsed;
+    parseInitialObstructionFile(file, usedPath, parsed);
 
 
-    // Step 0: Read the file and hold it in memory
+    // ----- Step 1: place EVERY footprint on the obstruction boards first, so each obstruction's
+    //       territory (Step 2) is computed once against the complete wall map — no per-add reapply. -----
+    for (const auto& po : parsed) {
+        updateObstructionBoards(po.x, po.y, po.info.width, po.info.height, po.player, po.team, "add");
+    }
 
-    // Step 1: Loop through all obstructions, add them to the obstruction boards using something like 
-    // makeObstructionInstance and updateObstructionBoards?
-    // Finish loop.
+    // ----- Step 2: add each obstruction's territory influence and DSU connectivity. Walls are
+    //       already complete, so the influence is final on the first pass. performTerritoryUpdateWithDSUSync
+    //       runs updateTerritory (registers the instance + cellObstructionAttribution) then
+    //       addToConnectedObstructions, processed in file order exactly as the per-add path. -----
+    for (const auto& po : parsed) {
+        const PlayerObject instance = makeObstructionInstance(po.x, po.y, po.name, po.player, po.team, po.info);
+        performTerritoryUpdateWithDSUSync(instance, "add");
+    }
 
-    // Step 2: Loop through all obstructions, add territory around them using performTerritoryUpdateWithDSUSync? 
-    // Or just update Territory?
-    // Finish loop.
+    // ----- Step 3: one full ownership bool-pass per player/team and a single master-board rebuild -----
+    std::unordered_set<size_t> allPlayers, allTeams;
+    for (size_t p = 1; p <= numPlayers; ++p) allPlayers.insert(p);
+    for (size_t t = 1; t <= numTeams; ++t) allTeams.insert(t);
+    refreshOwnerBoolPasses(allPlayers, allTeams, std::make_tuple(0, 0, 0, 0));
+    rebuildMasterBoards();
 
-    // Step 3: Loop through all obstructions, update DSU connectivity? Could this be done in step 1 instead?
-
-    // Step 4: make boolean boards and master boards (refreshOwnerBoolPasses and rebuildMasterBoards)
-
-    ObstructionInfo info;
-    int team = 0;
-    // if (!lookupObstructionAndTeam(obstruction, player, info, team)) return {};
-    // const PlayerObject obstructionInstance = makeObstructionInstance(x, y, obstruction, player, team, info); // 1
-
-
-
-    // auto bounds = performTerritoryUpdateWithDSUSync(obstructionInstance, "add"); // 2
-
-
-
-    // For "add": capture DSU group bounds AFTER performTerritoryUpdateWithDSUSync
-    // calls addToConnectedObstructions (which creates/updates the group).
-    // std::vector<size_t> dsuGroupBounds = {x, x + info.width - 1, y, y + info.height - 1}; // 3
-    // // if (mod == "add") {
-    //     const ObstructionInstanceKey newKey{
-    //         static_cast<size_t>(player), static_cast<size_t>(team),
-    //         obstruction, Position{x, y}
-    //     };
-    //     const auto newKeyIt = obstructionInstanceIdsByKey.find(newKey);
-    //     if (newKeyIt != obstructionInstanceIdsByKey.end() && !newKeyIt->second.empty()) {
-    //         const size_t newId = newKeyIt->second.back();
-    //         if (dsuParent_.count(newId)) {
-    //             const size_t root = dsuFind(newId);
-    //             const auto groupIt = connectedGroupData_.find(root);
-    //             if (groupIt != connectedGroupData_.end() && groupIt->second.bounds.size() >= 4)
-    //                 dsuGroupBounds = groupIt->second.bounds;
-    //         }
-    //     }
-    // // }
-
-
-    // updateObstructionBoards(x, y, info.width, info.height, player, team, mod);
-
-
-    // std::unordered_set<size_t> players, teams;
-    // for (size_t i = 0; i < numPlayers; ++i) players.insert(i);
-    // for (size_t i = 0; i < numTeams; ++i) teams.insert(i);
-    // refreshOwnerBoolPasses(players, teams, bounds);
-    // rebuildMasterBoards();
-
-
-    // return {true, info, isFastPath, dsuGroupBounds};
+    return true;
 }
 
+void TerritoryAnalyser::parseInitialObstructionFile(std::ifstream& file, const std::string& filePath, std::vector<ParsedObstruction>& parsed) {
+    
+    std::string line;
+    int lineNumber = 0;
+
+    while (std::getline(file, line)) {
+
+        ++lineNumber;
+        const size_t firstContent = line.find_first_not_of(" \t\r\n");
+        if (firstContent == std::string::npos || line[firstContent] == '#') {
+            continue;
+        }
+
+        // Layout from the first digit: x , y , "Name" , player [, ...]
+        const size_t start = line.find_first_of("0123456789");
+        const size_t c1 = (start == std::string::npos) ? std::string::npos : line.find(',', start);
+        const size_t c2 = (c1 == std::string::npos)    ? std::string::npos : line.find(',', c1 + 1);
+        const size_t q1 = (c2 == std::string::npos)    ? std::string::npos : line.find('"', c2 + 1);
+        const size_t q2 = (q1 == std::string::npos)    ? std::string::npos : line.find('"', q1 + 1);
+        const size_t c3 = (q2 == std::string::npos)    ? std::string::npos : line.find(',', q2 + 1);
+        if (c1 == std::string::npos || c2 == std::string::npos || q1 == std::string::npos
+            || q2 == std::string::npos || c3 == std::string::npos) {
+            std::cerr << "Warning: batchAddObstructions skipping malformed line " << lineNumber
+                      << " in " << filePath << ": " << line << std::endl;
+            continue;
+        }
+
+        ParsedObstruction po;
+        try {
+            po.x      = static_cast<size_t>(std::stoul(line.substr(start, c1 - start)));
+            po.y      = static_cast<size_t>(std::stoul(line.substr(c1 + 1, c2 - c1 - 1)));
+            po.name   = line.substr(q1 + 1, q2 - q1 - 1);
+            po.player = std::stoi(line.substr(c3 + 1));
+        } catch (const std::exception&) {
+            std::cerr << "Warning: batchAddObstructions skipping unparseable line " << lineNumber
+                      << " in " << filePath << ": " << line << std::endl;
+            continue;
+        }
+
+        // Resolve type/team once; unknown obstruction types are skipped (lookup logs the reason).
+        if (!lookupObstructionAndTeam(po.name, po.player, po.info, po.team)) {
+            continue;
+        }
+        parsed.push_back(std::move(po));
+    }
+
+    return;
+}
 /**
  * @brief Main entry point for adding or removing an obstruction.  Delegates all state work to
  *        updateObstructionState, then triggers fill recomputation for all affected players/teams.

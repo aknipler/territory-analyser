@@ -56,6 +56,6 @@
   "_old_teamColours": [
     [1, [255, 212, 155, 255]]
   ],
-  "edgeOpacity": 220,
-  "territoryOpacity": 120
+  "edgeOpacity": 200,
+  "territoryOpacity": 100
 }

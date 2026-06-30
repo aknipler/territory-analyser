@@ -108,6 +108,15 @@ struct ConnectedObstructions {
     std::unordered_set<size_t> mapEdgeObstructionIds; // instanceIds of obstructions whose footprint reaches a map boundary
 };
 
+struct ParsedObstruction { 
+    size_t x, y; 
+    std::string name; 
+    int player; 
+    ObstructionInfo info; 
+    int team; 
+};
+
+
 class TerritoryAnalyser {
     private:
         std::vector<Grid> playerGrids, teamGrids; // index 0 unused; ids start at 1
@@ -187,11 +196,17 @@ class TerritoryAnalyser {
          *         (e.g. during initial state loading before initialiseFill has been called). */
         ObstructionStateResult updateObstructionState(size_t x, size_t y, const std::string& obstruction, int player, const std::string& mod);
 
-        /** @brief Performs all territory/obstruction/DSU state updates for a batch of obstructions,
-         *         but only adding. Used in initial state loading before initialiseFill has been called. 
-         *         Takes a pathFile string as input, which should contain all the obstruction data in 
-         *         the format x, y, obstruction, player. */
-        ObstructionStateResult batchAddObstructions(std::string filePath);
+        /** @brief Adds a whole file of obstructions efficiently for initial state loading (before
+         *         initialiseFill). Add-only. The file holds one obstruction per line as
+         *         x,y,"Name",player (legacy analyser.updateObstruction(...) lines are also accepted);
+         *         '#' and blank lines are skipped. Unlike calling updateObstructionState per line,
+         *         it places ALL footprints on the obstruction boards first, then computes each
+         *         obstruction's territory once against the complete wall map (no per-add reapply),
+         *         and does a single bool-pass + master-board rebuild at the end.
+         *  @return false if the file cannot be opened. */
+        bool batchAddObstructions(const std::string& filePath);
+
+        void parseInitialObstructionFile(std::ifstream& file, const std::string& filePath, std::vector<ParsedObstruction>& parsed);
 
         /** @brief Main entry point for adding or removing an obstruction: orchestrates territory,
          *         obstruction, DSU connectivity, and fill recomputation for all affected players/teams. */
