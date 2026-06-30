@@ -1,0 +1,32 @@
+# GLYPH LABELLING TEMPLATE  (fill the NAME column)
+# View glyph_grid_top.png / glyph_grid_bot.png (readable) or contact_sheet.png
+# Footprint hints:
+#   2x2 -> House / Mining Camp / Lumber Camp
+#   3x3 -> Barracks / Archery Range / Stable / Monastery / Blacksmith
+#   4x4 -> Town Center / Market / Siege Workshop / University / Castle
+#   1x1 -> Tower (Outpost)  [note: some 1x1 here are mis-sized Houses]
+# Known legend: axe=Lumber Camp, crossed swords=Barracks, house=House,
+#   grad cap=University, hammer+anvil=Blacksmith, catapult=Siege Workshop,
+#   scales=Market, pickaxe=Mining Camp
+
+cluster | footprint | count | players | NAME
+C0  | 2x2 |  64 | p1=5 p2=17 p3=25 p4=17 | ____________
+C1  | 2x2 |  47 | p1=3 p2=21 p3=15 p4=8  | ____________
+C2  | 2x2 |  41 | p1=2 p2=10 p3=10 p4=19 | ____________
+C3  | 3x3 |  41 | p1=2 p2=16 p3=10 p4=13 | ____________
+C4  | 4x4 |  28 | p1=4 p2=7 p3=8 p4=9    | ____________
+C5  | 4x4 |  14 | p2=6 p3=2 p4=6         | ____________
+C6  | 2x2 |  11 | p2=4 p3=3 p4=4         | ____________
+C7  | 3x3 |  11 | p1=1 p2=4 p3=4 p4=2    | ____________
+C8  | 3x3 |   7 | p1=1 p2=2 p3=2 p4=2    | ____________
+C9  | 3x3 |   3 | p1=1 p3=1 p4=1         | ____________
+C10 | 4x4 |   3 | p2=2 p3=1              | ____________
+C11 | 2x2 |   2 | p4=2                   | ____________
+C12 | 3x3 |   2 | p1=1 p3=1              | ____________
+C13 | 4x4 |   2 | p3=1 p4=1              | ____________
+C14 | 4x4 |   2 | p1=1 p3=1              | ____________
+C15 | 1x1 |   1 | p1=1                   | ____________
+C16 | 1x1 |   1 | p3=1                   | ____________
+C17 | 2x2 |   1 | p1=1                   | ____________
+C18 | 2x2 |   1 | p1=1                   | ____________
+C19 | 3x3 |   1 | p4=1                   | ____________

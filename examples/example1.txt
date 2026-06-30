@@ -1,0 +1,132 @@
+# Initial building placement commands
+
+# gaia
+# forest 1
+analyser.updateObstruction(8,7,"Tree",0, "add");
+analyser.updateObstruction(9,7,"Tree",0, "add");
+analyser.updateObstruction(10,7,"Tree",0, "add");
+analyser.updateObstruction(8,8,"Tree",0, "add");
+analyser.updateObstruction(9,8,"Tree",0, "add");
+analyser.updateObstruction(10,8,"Tree",0, "add");
+analyser.updateObstruction(7,9,"Tree",0, "add");
+analyser.updateObstruction(8,9,"Tree",0, "add");
+analyser.updateObstruction(9,9,"Tree",0, "add");
+analyser.updateObstruction(7,10,"Tree",0, "add");
+analyser.updateObstruction(8,10,"Tree",0, "add");
+analyser.updateObstruction(9,10,"Tree",0, "add");
+analyser.updateObstruction(9,11,"Tree",0, "add");
+
+# forest 2
+analyser.updateObstruction(20,15,"Tree",0, "add");
+analyser.updateObstruction(21,15,"Tree",0, "add");
+analyser.updateObstruction(20,16,"Tree",0, "add");
+analyser.updateObstruction(21,16,"Tree",0, "add");
+analyser.updateObstruction(22,16,"Tree",0, "add");
+analyser.updateObstruction(20,17,"Tree",0, "add");
+analyser.updateObstruction(21,17,"Tree",0, "add");
+analyser.updateObstruction(22,17,"Tree",0, "add");
+analyser.updateObstruction(21,18,"Tree",0, "add");
+analyser.updateObstruction(22,18,"Tree",0, "add");
+
+# p2 
+analyser.updateObstruction(4,11,"Tree",0, "add");
+analyser.updateObstruction(5,11,"Tree",0, "add");
+analyser.updateObstruction(6,11,"Tree",0, "add");
+analyser.updateObstruction(7,11,"Tree",0, "add");
+analyser.updateObstruction(8,11,"Tree",0, "add");
+analyser.updateObstruction(6,12,"Tree",0, "add");
+analyser.updateObstruction(7,12,"Tree",0, "add");
+analyser.updateObstruction(8,12,"Tree",0, "add");
+analyser.updateObstruction(7,13,"Tree",0, "add");
+analyser.updateObstruction(8,13,"Tree",0, "add");
+
+# gold mines
+analyser.updateObstruction(10,14,"Gold Mine",0, "add");
+analyser.updateObstruction(10,15,"Gold Mine",0, "add");
+analyser.updateObstruction(11,15,"Gold Mine",0, "add");
+analyser.updateObstruction(10,16,"Gold Mine",0, "add");
+analyser.updateObstruction(11,16,"Gold Mine",0, "add");
+
+# p1
+analyser.updateObstruction(11,6,"Barracks",1, "add");
+analyser.updateObstruction(8,5,"House",1, "add");
+analyser.updateObstruction(8,3,"House",1, "add");
+analyser.updateObstruction(6,1,"House",1, "add");
+analyser.updateObstruction(10,9,"Blacksmith",1, "add");
+analyser.updateObstruction(13,12,"Barracks",1, "add");
+analyser.updateObstruction(13,15,"House",1, "add");
+
+analyser.updateObstruction(3,25,"House",1, "add");
+
+# p2
+analyser.updateObstruction(0,11,"House",2, "add");
+analyser.updateObstruction(1,13,"House",2, "add");
+analyser.updateObstruction(3,13,"House",2, "add");
+analyser.updateObstruction(7,15,"Barracks",2, "add");
+analyser.updateObstruction(10,17,"Blacksmith",2, "add");
+analyser.updateObstruction(10,20,"House",2, "add");
+analyser.updateObstruction(10,22,"House",2, "add");
+analyser.updateObstruction(10,24,"House",2, "add");
+analyser.updateObstruction(10,26,"House",2, "add");
+analyser.updateObstruction(9,28,"House",2, "add");
+analyser.updateObstruction(0,26,"House",2, "add");
+analyser.updateObstruction(2,28,"House",2, "add");
+analyser.updateObstruction(4,27,"Barracks",2, "add");
+analyser.updateObstruction(7,29,"House",2, "add");
+
+# p3
+analyser.updateObstruction(14,22,"Barracks",3, "add");
+analyser.updateObstruction(14,17,"House",3, "add");
+analyser.updateObstruction(17,17,"House",3, "add");
+analyser.updateObstruction(17,14,"House",3, "add");
+analyser.updateObstruction(13,19,"Blacksmith",3, "add");
+analyser.updateObstruction(16,20,"House",3, "add");
+analyser.updateObstruction(18,20,"House",3, "add");
+analyser.updateObstruction(20,20,"House",3, "add");
+analyser.updateObstruction(22,19,"House",3, "add");
+analyser.updateObstruction(24,19,"House",3, "add");
+analyser.updateObstruction(26,19,"House",3, "add");
+analyser.updateObstruction(28,21,"House",3, "add");
+
+# water test
+
+# fill test
+analyser.updateObstruction(20,4,"Barracks",3, "add");
+analyser.updateObstruction(25,4,"Barracks",3, "add");
+
+# p4
+analyser.updateObstruction(13,32,"House",4, "add");
+analyser.updateObstruction(14,30,"House",4, "add");
+analyser.updateObstruction(16,29,"House",4, "add");
+analyser.updateObstruction(18,28,"House",4, "add");
+analyser.updateObstruction(20,28,"House",4, "add");
+analyser.updateObstruction(22,28,"House",4, "add");
+analyser.updateObstruction(24,28,"House",4, "add");
+analyser.updateObstruction(26,28,"House",4, "add");
+analyser.updateObstruction(28,28,"House",4, "add");
+analyser.updateObstruction(30,28,"House",4, "add");
+analyser.updateObstruction(32,28,"House",4, "add");
+analyser.updateObstruction(34,28,"House",4, "add");
+analyser.updateObstruction(35,30,"House",4, "add");
+analyser.updateObstruction(37,31,"House",4, "add");
+analyser.updateObstruction(37,33,"House",4, "add");
+analyser.updateObstruction(37,35,"House",4, "add");
+analyser.updateObstruction(37,37,"House",4, "add");
+analyser.updateObstruction(33,39,"Barracks",4, "add");
+analyser.updateObstruction(31,41,"House",4, "add");
+analyser.updateObstruction(29,42,"House",4, "add");
+analyser.updateObstruction(27,42,"House",4, "add");
+analyser.updateObstruction(25,42,"House",4, "add");
+analyser.updateObstruction(23,42,"House",4, "add");
+analyser.updateObstruction(21,42,"House",4, "add");
+analyser.updateObstruction(19,42,"House",4, "add");
+analyser.updateObstruction(17,42,"House",4, "add");
+analyser.updateObstruction(15,40,"House",4, "add");
+analyser.updateObstruction(14,38,"House",4, "add");
+analyser.updateObstruction(12,37,"House",4, "add");
+analyser.updateObstruction(13,34,"Barracks",4, "add");
+
+analyser.updateObstruction(19,39,"House",4, "add");
+
+# filling test
+analyser.updateObstruction(27,26, "House", 3, "add");

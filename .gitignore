@@ -1,4 +1,8 @@
 opencv*
 build/
 .vscode/
+.claude/
+.dist/
 output/*
+*handoff_bundle/ta_work/*
+*examples/CA_references/*

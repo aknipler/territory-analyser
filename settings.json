@@ -1,19 +1,24 @@
 {
   "appName": "TerritoryAnalyser",
-  "version": "0.8",
+  "version": "0.86",
   "outputDirectory": "output/",
 
   "testingMode": false,
-  "forceRadialInfluenceForRangedBuildings": false,
+  "forceRadialInfluenceForAllObstructions": false,
+  "validateIncrementalFills": false,
+  "dumpInitialiseFillSteps": false,
+  "dumpUpdateFillSteps": false,
   
-  "numberOfPlayers": 4,
+  "numberOfPlayers": 6,
   "numberOfTeams": 2,
-  "mapSize": 30,
+  "mapSize": 168,
   "teamAssignments": [
     [1, 1],
     [2, 2],
     [3, 1],
-    [4, 2]
+    [4, 2],
+    [5, 1],
+    [6, 2]
   ],
   
   "contestedTerritoryMethod": "staticColour",
@@ -21,33 +26,36 @@
   "contestedTerritoryColour": [150, 150, 150, 255],
   "rawTerritoryOwnershipThreshold": 3,
   "CLOSED_SHAPE_GAPS_THRESHOLD": 2,
-  "ownershipThreshold": 0.85,
+  "ownershipThreshold": 0.40,
+  "isWalledMultiplier": 2.5,
   "contestedOwnershipThreshold": 0.6,
-  "isWalledMultiplier": 4.5,
-  "nonWalkableTerrainBuildings": ["Dock", "Harbour"],
+  "nonWalkableTerrainObstructions": ["Dock", "Harbour"],
   
   "playerColours": [
-    [0, [0,   0,   0,   255]],
+    [0, [0,   0,   0,   0  ]],
     [1, [255, 0,   0,   255]],
     [2, [0,   0,   255, 255]],
     [3, [0,   255, 0,   255]],
-    [4, [255, 255, 0,   255]],
-    [5, [0,   255, 255, 255]],
-    [6, [188, 3,   220, 255]],
+    [4, [0,   255, 255, 255]],
+    [5, [255, 255, 0,   255]],
+    [6, [220, 3,   188, 255]],
     [7, [80,  80,  80,  255]],
-    [8, [255, 150, 0,   255]]
+    [8, [0, 150, 255,   255]]
   ],
   "teamColours": [
-    [0, [0,   0,   0,   255]],
-    [1, [255, 0,   0,   255]],
-    [2, [0,   0,   255, 255]],
+    [0, [0,   0,   0,   0  ]],
+    [1, [215, 202, 145, 255]],
+    [2, [60,  160, 230, 255]],
     [3, [0,   255, 0,   255]],
-    [4, [255, 255, 0,   255]],
-    [5, [0,   255, 255, 255]],
-    [6, [188, 3,   220, 255]],
+    [4, [0,   255, 255, 255]],
+    [5, [255, 255, 0,   255]],
+    [6, [220, 3,   188, 255]],
     [7, [80,  80,  80,  255]],
-    [8, [255, 150, 0,   255]]
+    [8, [0,   150, 255, 255]]
   ],
-  "edgeOpacity": 255,
-  "territoryOpacity": 111
+  "_old_teamColours": [
+    [1, [255, 212, 155, 255]]
+  ],
+  "edgeOpacity": 200,
+  "territoryOpacity": 100
 }

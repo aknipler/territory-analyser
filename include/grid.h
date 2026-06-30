@@ -20,17 +20,13 @@ class Grid {
         std::vector<std::vector<bool>> dataBool;
         size_t size;
 
-        std::unordered_map <std::string, std::tuple <std::size_t,std::size_t>> building_dict;
+        std::unordered_map <std::string, std::tuple <std::size_t,std::size_t>> obstructionDict;
         
     public:
         // Constructor to initialize the dynamic 2D array
         Grid(int givenSize) 
             : size(givenSize), dataTruth(givenSize, std::vector<double>(givenSize, 0)), dataBool(givenSize, std::vector<bool>(givenSize, false)) {
 
-            // Generate building_dict AK: -> should be a seperate file that you read into the program on a global level
-            building_dict["House"] = std::make_tuple(2,2);
-            building_dict["Barracks"] = std::make_tuple(4,3);
-            building_dict["Blacksmith"] = std::make_tuple(3,2);
         }
 
         
@@ -43,12 +39,19 @@ class Grid {
 
     void setData(std::vector<std::vector<double>> newData, std::string type = "truth");
 
+    /** @brief Converts dataTruth to dataBool within bounds: a cell is true when its truth value >= threshold.
+     *         If bounds is the zero-tuple, the entire board is recomputed. */
     void terrainBoolPass( size_t threshold=4, std::tuple<size_t, size_t, size_t, size_t> bounds = std::make_tuple(0,0,0,0));
 
 };
 
 
 // helper functions
+/**
+ * @brief Computes a cell-ownership edge board: a cell is included when its 2x2 neighbourhood
+ *        contains more than one distinct owner value.  fillBoard (optional) is used as a fallback
+ *        ownership source for cells where board has no owner.  Only the "fourBox" mode is implemented.
+ */
 template <typename T>
 std::vector<std::vector<size_t>> findEdges(const std::vector<std::vector<T>>& board,
                                            const std::vector<std::vector<size_t>>* fillBoard=nullptr,
@@ -57,7 +60,7 @@ std::vector<std::vector<size_t>> findEdges(const std::vector<std::vector<T>>& bo
     std::vector<std::vector<size_t>> detEdges(board.size(), std::vector<size_t>(board.size(), 0));
 
     if (mode=="fourBox") {
-        // we check 4 items, ij, the next in the row, the next in the column and the next in the diagonal.
+        // Check 4 items: ij, the next in y, the next in x, and the next in the diagonal.
         // if they are all the same, then there is no edge piece. 
         // Otherwise there is an edge piece.
 
@@ -82,7 +85,7 @@ std::vector<std::vector<size_t>> findEdges(const std::vector<std::vector<T>>& bo
         for(size_t i=0; i<board.size(); ++i) {
             for(size_t j=0; j<board.size(); ++j) {
 
-                // in the final row and column, we don't want to index outside the array
+                // At the final y/x edge, avoid indexing outside the array.
                 if(i==board.size() - 1) {
                     comparison_i = -1;
                 } else {comparison_i = 1; }
@@ -92,15 +95,15 @@ std::vector<std::vector<size_t>> findEdges(const std::vector<std::vector<T>>& bo
                 } else {comparison_j = 1; }
 
                 size_t centerVal = effective[i][j];
-                size_t rowVal = effective[i+comparison_i][j];
-                size_t colVal = effective[i][j+comparison_j];
+                size_t yVal = effective[i+comparison_i][j];
+                size_t xVal = effective[i][j+comparison_j];
                 size_t diagVal = effective[i+comparison_i][j+comparison_j];
 
-                if (centerVal != rowVal || centerVal != colVal || centerVal != diagVal) {
+                if (centerVal != yVal || centerVal != xVal || centerVal != diagVal) {
                     // only apply edge pieces to non-empty effective ownership
                     detEdges[i][j] = centerVal;
-                    detEdges[i+comparison_i][j] = rowVal;
-                    detEdges[i][j+comparison_j] = colVal;
+                    detEdges[i+comparison_i][j] = yVal;
+                    detEdges[i][j+comparison_j] = xVal;
                     detEdges[i+comparison_i][j+comparison_j] = diagVal;
                 }
             }
@@ -136,25 +139,25 @@ void printBoard(const std::vector<std::vector<T>>& board, size_t precision=1, bo
         return;
     }
 
-    const size_t rowCount = board.size();
-    size_t colCount = 0;
-    for (const auto& row : board) {
-        colCount = std::max(colCount, row.size());
+    const size_t yCount = board.size();
+    size_t xCount = 0;
+    for (const auto& yValues : board) {
+        xCount = std::max(xCount, yValues.size());
     }
 
-    // Print column headers using the same width pattern as row cells.
+    // Print x headers using the same width pattern as cell values.
     std::cout << std::setw(3) << " " << "   ";
-    for (size_t i = 0; i < colCount; ++i) {
+    for (size_t i = 0; i < xCount; ++i) {
         std::cout << "-" << std::setw(2) << i << "-";
     }
     std::cout << std::endl;
 
-    for (size_t i = 0; i < rowCount; ++i) {
-        // Print rows with row headers
+    for (size_t i = 0; i < yCount; ++i) {
+        // Print y lines with y headers.
         std::cout << std::setw(3) << std::fixed << std::setprecision(precision) << i << " | ";
 
-        // print values in the row
-        for (size_t j = 0; j < colCount; ++j) {
+        // Print values along x.
+        for (size_t j = 0; j < xCount; ++j) {
             if (j >= board[i].size()) {
                 std::cout << std::setw(3) << " " << " ";
                 continue;
@@ -172,7 +175,7 @@ void printBoard(const std::vector<std::vector<T>>& board, size_t precision=1, bo
             }
         }
 
-        // End of row
+        // End of y line.
         std::cout << std::setw(3) << std::fixed << std::setprecision(precision) << " | " << i << std::endl;
     }
 }
